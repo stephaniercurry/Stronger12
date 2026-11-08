@@ -58,9 +58,31 @@ function formatDate(s,opts){return dateOf(s).toLocaleDateString(undefined,opts||
 function h(v){return String(v===undefined||v===null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(n,dp=0){return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:dp})}
 const defaultSettings={startDate:nextMonday(),proteinGoal:130,fiberGoal:30,weightUnit:'lb',upperIncrement:2.5,lowerIncrement:5};
-let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],birthdays:[]};
+let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],birthdays:[],cycles:[],activeCycleId:null};
 let storageFailed=false;
-try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[]}}}catch(e){storageFailed=true}
+try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null}}}catch(e){storageFailed=true}
+const PROGRAM_OPTIONS={
+ foundation:{label:'Foundations',description:'The original full-body, upper-body and lower-body program, with simple progression and recovery weeks.'},
+ builder:{label:'Strength Builder',description:'A new 12-week block with more upper/lower strength emphasis using familiar home or gym exercises.'},
+ balance:{label:'Strength + Stability',description:'A new 12-week block with extra posture, core and controlled single-leg work.'}
+};
+function ensureCycleData(){
+ if(!Array.isArray(state.cycles))state.cycles=[];
+ if(!state.cycles.length)state.cycles=[{id:'cycle-1',program:'foundation',startDate:state.settings.startDate||nextMonday(),name:'Cycle 1'}];
+ if(!state.activeCycleId||!state.cycles.some(c=>c.id===state.activeCycleId))state.activeCycleId=state.cycles[state.cycles.length-1].id;
+ // Keep the original 12-week program linked to the existing settings for older backups.
+ if(state.cycles[0].id==='cycle-1'&&!state.cycles[0].startDate)state.cycles[0].startDate=state.settings.startDate||nextMonday();
+}
+ensureCycleData();
+function activeCycle(){return state.cycles.find(c=>c.id===state.activeCycleId)||state.cycles[0]}
+function activeCycleIndex(){return state.cycles.findIndex(c=>c.id===activeCycle().id)}
+function cycleName(c){return (c.name||('Cycle '+(state.cycles.indexOf(c)+1)))+' · '+(PROGRAM_OPTIONS[c.program]||PROGRAM_OPTIONS.foundation).label}
+function nextCycleStart(){
+ const last=state.cycles[state.cycles.length-1],end=addDays(last.startDate,84);
+ return end>=TODAY?end:nextMonday();
+}
+function cycleSessionKey(c,w,day){return c.id==='cycle-1'?'w'+w+'-'+day:c.id+'-w'+w+'-'+day}
+function cycleWorkoutEntries(c){return Object.entries(state.workouts).filter(([k])=>c.id==='cycle-1'?/^w\d+-(tue|thu|fri)$/.test(k):k.startsWith(c.id+'-w'))}
 function save(){try{state.lastSavedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify(state));storageFailed=false;const tag=document.getElementById('savedStatus');if(tag)tag.textContent='✓ Saved on this device at '+new Date(state.lastSavedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}catch(e){storageFailed=true;const tag=document.getElementById('savedStatus');if(tag)tag.textContent='⚠ Save failed. Export backup now.';const warn=document.getElementById('storageWarn');if(warn)warn.classList.remove('hidden')}}
 function uid(){return String(Date.now())+'-'+Math.random().toString(36).slice(2,8)}
 function getLastBackup(){try{return localStorage.getItem(BACKUP_KEY)||''}catch(e){return ''}}
@@ -101,7 +123,31 @@ const PLAN_GYM={
   thu:{day:'Thursday',title:'Upper body + core',description:'Gym option: shoulders, back and anti-rotation core.',ids:['step','shoulderpressmachine','latmachine','pallofcable','lateralcable']},
   fri:{day:'Friday',title:'Lower body + glutes',description:'Gym option: legs, glutes and a supported upper-body movement.',ids:['lunge','hipmachine','hamcurl','inclinechestmachine','side']}
 };
-function planFor(day,venue){return venue==='gym'?PLAN_GYM[day]:PLAN[day]}
+const BUILDER_HOME={
+ tue:{day:'Tuesday',title:'Full-body strength',description:'Build strength with a squat, push, pull, glute and core movement.',ids:['squat','floor','onerow','bridge','deadbug']},
+ thu:{day:'Thursday',title:'Upper-body strength',description:'Upper-body emphasis with pulling, pressing, arms and stability.',ids:['shoulder','ring','incline','curl','side']},
+ fri:{day:'Friday',title:'Lower-body strength',description:'Lower-body strength with controlled unilateral leg work and glutes.',ids:['step','lunge','bridge','calf','birddog']}
+};
+const BUILDER_GYM={
+ tue:{day:'Tuesday',title:'Full-body strength',description:'Machine-supported full-body strength session.',ids:['legpress','chestpress','cablerow','hipmachine','deadbug']},
+ thu:{day:'Thursday',title:'Upper-body strength',description:'Press, pull and stabilize with machines and cables.',ids:['shoulderpressmachine','latmachine','inclinechestmachine','pallofcable','lateralcable']},
+ fri:{day:'Friday',title:'Lower-body strength',description:'Leg-focused gym session with glute and core training.',ids:['legpress','hamcurl','hipmachine','calf','side']}
+};
+const BALANCE_HOME={
+ tue:{day:'Tuesday',title:'Full-body + stability',description:'Whole-body work with extra balance and control.',ids:['squat','ring','floor','birddog','deadbug']},
+ thu:{day:'Thursday',title:'Upper body + core',description:'Support the shoulders, back and trunk.',ids:['shoulder','onerow','curl','side','deadbug']},
+ fri:{day:'Friday',title:'Lower body + balance',description:'Single-leg control, glute work and stable movement.',ids:['step','lunge','bridge','calf','birddog']}
+};
+const BALANCE_GYM={
+ tue:{day:'Tuesday',title:'Full-body + stability',description:'Supported strength with deliberate trunk control.',ids:['legpress','cablerow','chestpress','deadbug','pallofcable']},
+ thu:{day:'Thursday',title:'Upper body + core',description:'Upper-body machines and core stability.',ids:['shoulderpressmachine','latmachine','lateralcable','pallofcable','side']},
+ fri:{day:'Friday',title:'Lower body + balance',description:'Controlled gym leg and glute training.',ids:['step','hamcurl','hipmachine','calf','birddog']}
+};
+function planFor(day,venue){
+ const cycle=activeCycle(),program=cycle.program||'foundation';
+ const plans=program==='builder'?(venue==='gym'?BUILDER_GYM:BUILDER_HOME):program==='balance'?(venue==='gym'?BALANCE_GYM:BALANCE_HOME):(venue==='gym'?PLAN_GYM:PLAN);
+ return plans[day]||PLAN[day];
+}
 function demoUrl(id){return 'https://www.youtube.com/results?search_query='+encodeURIComponent(EX[id].name+' proper form exercise tutorial')}
 function sessionHasLogs(s){return Object.values(s.sets||{}).some(arr=>Array.isArray(arr)&&arr.some(x=>x&&(Number(x.reps)>0||Number(x.weight)>0)))}
 const FOODS=[
@@ -119,12 +165,12 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','☑','Tasks'],['lift','▣','Workout'],['food','◕','Food'],['progress','▥','Progress'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:Math.max(1,Math.min(12,Math.floor(daysBetween(state.settings.startDate,TODAY)/7)+1)),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,yogaDate:TODAY,editBirthdayId:null};
-function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(state.settings.startDate,TODAY)/7)+1))}
-function weekDate(w){return addDays(state.settings.startDate,(w-1)*7)}
-function scheduledDate(w,day){return addDays(weekDate(w),{tue:1,thu:3,fri:4}[day])}
-function key(w,day){return 'w'+w+'-'+day}
-function getSession(w,day){return state.workouts[key(w,day)]||{week:w,day,date:scheduledDate(w,day),venue:'home',sets:{},notes:'',completed:false}}
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,yogaDate:TODAY,editBirthdayId:null};
+function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
+function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
+function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
+function key(w,day){return cycleSessionKey(activeCycle(),w,day)}
+function getSession(w,day){return state.workouts[key(w,day)]||{week:w,day,date:scheduledDate(w,day),cycleId:activeCycle().id,venue:'home',sets:{},notes:'',completed:false}}
 function ensureSession(w,day){const k=key(w,day);if(!state.workouts[k])state.workouts[k]=getSession(w,day);return state.workouts[k]}
 function phase(w){if(w===4||w===8)return{short:'Recovery week',label:'Deload',rir:'4+',desc:'Use about 10–15% less load than your recent working weights. Keep three comfortable sets; technique comes first.',recovery:true};if(w<=3)return{short:'Foundation',label:'Build the habit',rir:'3',desc:'Choose comfortable weights, finish with about 3 reps still possible, and build consistency.'};if(w<=7)return{short:'Building',label:'Progress the load',rir:'2–3',desc:'Add reps before weight. Keep at least 2 clean reps in reserve.'};if(w<=11)return{short:'Strength',label:'Make it stronger',rir:'2',desc:'Main movements use a slightly lower rep range. No maximal lifting or grinding reps.'};return{short:'Consolidation',label:'Celebrate progress',rir:'2–3',desc:'Repeat strong, clean sets and look for a rep or load improvement versus Week 1. No one-rep-max testing.'}}
 function range(ex,w){if(ex.style==='time')return w>=9&&w<=11?'25–40 sec':'20–30 sec';if(ex.style==='core')return '8–12';if(ex.style==='accessory')return w>=9&&w<=11?'10–12':'10–15';if(w<=4)return '8–12';if(w<=8)return '8–10';if(w<=11)return '6–8';return '8–12'}
