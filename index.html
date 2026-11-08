@@ -173,8 +173,9 @@ function taskItem(t,compact=false){
  (t.priority==='high'?'<span class="task-priority">Important</span>':'')+
  (ui.taskFilter==='upcoming'&&(t.repeat||'none')!=='none'?'<span>Next: '+h(formatDate(nextTaskDate(t)))+'</span>':'')+'</div>'+
  (!compact&&t.notes?'<p class="task-note">'+h(t.notes)+'</p>':'')+'</div>'+
- (compact?'':'<div class="task-actions">'+(!done&&(t.repeat||'none')==='none'&&t.due<=TODAY?'<button class="btn small" data-task-tomorrow="'+h(t.id)+'" title="Move to tomorrow">Tomorrow</button>':'')+'<button class="btn small" data-task-edit="'+h(t.id)+'" aria-label="Edit '+h(t.title)+'">Edit</button></div>')+
+ (compact?'':'<div class="task-actions">'+(!done&&(t.repeat||'none')==='none'&&t.due<=TODAY?'<button class="btn small" data-task-tomorrow="'+h(t.id)+'" title="Move to tomorrow">Tomorrow</button>':'')+'<button class="btn small" data-task-edit="'+h(t.id)+'" aria-label="Edit '+h(t.title)+'">Edit</button>')+
  '<button type="button" class="task-more" data-task-reveal="'+h(t.id)+'" aria-expanded="'+revealed+'" aria-label="Show delete for '+h(t.title)+'" title="Swipe left or tap to show delete">···</button>'+
+ (compact?'':'</div>')+
  '</div></div>';
 }
 function nextTaskDate(t){
