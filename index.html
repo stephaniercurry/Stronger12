@@ -170,6 +170,31 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline-color:#71bd
  .dark .weekstrip>div{color:var(--ink)}
 }
 
+
+
+/* Life: compact meal inspiration with optional one-tap grocery planning. */
+.dinner-emblem{display:grid;place-items:center;width:49px;height:49px;flex:0 0 49px;border-radius:16px;background:#ffe6e8;font-size:24px}
+.dinner-add{border:1px solid #e7e6ef;border-radius:15px;background:#fafafb;margin-top:16px;padding:12px 15px}
+.dinner-add>summary{font-size:14px;font-weight:800;color:var(--forest);cursor:pointer;min-height:24px}
+.dinner-add[open]{background:#fff}
+.dinner-add form input,.dinner-add form textarea{font-size:16px}
+.dinner-notice{margin-top:14px}
+.dinner-ideas-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:17px}
+.dinner-idea{border:1px solid #e6e5ed;border-radius:17px;background:#fffafb;padding:15px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.dinner-idea-top{display:flex;justify-content:space-between;align-items:start;gap:9px}
+.dinner-idea-top strong{font-size:16px;line-height:1.4;overflow-wrap:anywhere}
+.dinner-plate{color:#d991a9;font-size:24px;line-height:1}
+.dinner-notes{font-size:12px;line-height:1.55;margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.dinner-ingredients{border:1px solid #e7e6ee;background:#fff;border-radius:11px;padding:9px 11px}
+.dinner-ingredients>summary{font-weight:700;color:#347b7f}
+.dinner-ingredients ul{margin:8px 0 0;padding-left:21px;line-height:1.7;color:var(--muted)}
+.dinner-ingredients li{overflow-wrap:anywhere}
+.dinner-actions{gap:7px;margin-top:auto}
+.dinner-actions .btn.small{font-size:11px;min-height:36px;padding:7px 9px}
+.dinner-actions a.btn{text-decoration:none}
+.dinner-empty{background:#faf9fc;border:1px dashed #e5dfeb;color:var(--muted);margin-top:16px;padding:18px;border-radius:14px;font-size:13px}
+@media(max-width:760px){.dinner-ideas-list{grid-template-columns:1fr}.dinner-idea{padding:14px}}
+
 </style>
 </head>
 <body>
@@ -872,6 +897,36 @@ if(b.dataset.birthdayDelete){const i=state.birthdays.findIndex(x=>x.id===b.datas
 if(b.dataset.yogaEdit){ui.editYogaId=b.dataset.yogaEdit;ui.tab='lift';render();window.scrollTo(0,0);return}
 if(b.dataset.yogaCancel){ui.editYogaId=null;render();return}
 if(b.dataset.yogaDelete){const i=state.yogaSessions.findIndex(y=>y.id===b.dataset.yogaDelete);if(i>=0&&confirm('Delete this yoga entry?')){state.yogaSessions.splice(i,1);if(ui.editYogaId===b.dataset.yogaDelete)ui.editYogaId=null;save();render()}return}
+if(b.dataset.dinnerEdit){
+ if(!state.dinnerIdeas.some(x=>x.id===b.dataset.dinnerEdit))return;
+ ui.editDinnerId=b.dataset.dinnerEdit;ui.dinnerNotice='';ui.tab='life';render();
+ document.getElementById('dinnerIdeasSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+ return
+}
+if(b.dataset.dinnerCancel){ui.editDinnerId=null;ui.dinnerNotice='';render();return}
+if(b.dataset.dinnerDelete){
+ const idea=state.dinnerIdeas.find(x=>x.id===b.dataset.dinnerDelete);
+ if(idea&&confirm('Delete dinner idea: '+idea.name+'?')){
+  state.dinnerIdeas=state.dinnerIdeas.filter(x=>x.id!==idea.id);
+  if(ui.editDinnerId===idea.id)ui.editDinnerId=null;
+  ui.dinnerNotice='Dinner idea deleted.';save();render()
+ }
+ return
+}
+if(b.dataset.dinnerGrocery){
+ const idea=state.dinnerIdeas.find(x=>x.id===b.dataset.dinnerGrocery);
+ if(!idea)return;
+ const lines=[...new Set(dinnerIngredients(idea).map(x=>x.trim()))];
+ let added=0,returned=0,already=0;
+ for(const line of lines){
+  const normalized=line.replace(/\s+/g,' ').trim().toLocaleLowerCase();
+  const existing=state.groceries.find(x=>String(x.name||'').replace(/\s+/g,' ').trim().toLocaleLowerCase()===normalized);
+  if(existing){if(existing.checked){existing.checked=false;returned++}else already++;continue}
+  state.groceries.push({id:uid(),name:line,quantity:'',category:'Other',checked:false,createdAt:new Date().toISOString()});added++;
+ }
+ ui.dinnerNotice=added+' added to groceries'+(returned?' · '+returned+' moved back to shopping list':'')+(already?' · '+already+' already there':'')+'.';
+ if(added||returned)save();render();return
+}
 if(b.dataset.groceryCheck){const x=state.groceries.find(x=>x.id===b.dataset.groceryCheck);if(x){x.checked=!x.checked;save();render()}return}
 if(b.dataset.groceryEdit){ui.editGroceryId=b.dataset.groceryEdit;ui.tab='life';render();window.scrollTo(0,0);return}
 if(b.dataset.groceryCancel){ui.editGroceryId=null;render();return}
@@ -946,6 +1001,27 @@ if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),
  ui.week=currentWeek()
  }else state.settings[k]=v;save();render();return}});
 document.addEventListener('submit',ev=>{
+ if(ev.target.id==='dinnerForm'){
+  ev.preventDefault();
+  const fd=new FormData(ev.target);
+  const name=String(fd.get('name')||'').trim(),url=String(fd.get('url')||'').trim(),
+   ingredients=String(fd.get('ingredients')||'').trim(),notes=String(fd.get('notes')||'').trim();
+  if(!name||name.length>120||url.length>1000||ingredients.length>3000||notes.length>600){
+   alert('Enter a dinner name and keep each optional field within its length limit.');return
+  }
+  if(url&&!/^https?:\/\/[^\s/]+\.[^\s/]+(?:[^\s]*)?$/i.test(url)){
+   alert('Recipe links must start with https:// or http:// and point to a website.');return
+  }
+  const lines=ingredients?ingredients.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];
+  if(lines.length>100||lines.some(x=>x.length>180)){
+   alert('Use no more than 100 ingredients, with one item per line (up to 180 characters each).');return
+  }
+  const existing=state.dinnerIdeas.find(x=>x.id===ui.editDinnerId),
+   patch={name,url,ingredients:lines.join('\n'),notes};
+  if(existing)Object.assign(existing,patch);
+  else state.dinnerIdeas.push({id:uid(),...patch,createdAt:new Date().toISOString()});
+  ui.editDinnerId=null;ui.dinnerNotice='Saved '+name+'.';save();render();return
+ }
  if(ev.target.id==='importantDateForm'){
   ev.preventDefault();
   const fd=new FormData(ev.target),kind=String(fd.get('type')||'birthday'),
