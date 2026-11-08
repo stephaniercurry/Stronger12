@@ -784,7 +784,7 @@ function dinnerIdeasPanel(){
      (ingredients.length?'<div class="dinner-detail-label">Ingredients ('+ingredients.length+')</div><ul class="dinner-ingredient-list">'+ingredients.map(line=>'<li>'+h(line)+'</li>').join('')+'</ul>'+
      '<button type="button" class="btn small dinner-add-grocery" data-dinner-grocery="'+h(x.id)+'">+ Add ingredients to groceries</button>':'')+
      '</div>':'')+'</div>';
- }).join('')+'</div>':'<div class="dinner-empty">No ${RECIPE_CATEGORIES.find(([k])=>k===ui.recipeTab)?.[1].toLowerCase()||"recipes"} ideas yet. Tap Add idea to start this section.</div>')+
+ }).join('')+'</div>':'<div class="dinner-empty">No '+h((RECIPE_CATEGORIES.find(([k])=>k===ui.recipeTab)?.[1]||'recipes').toLowerCase())+' ideas yet. Tap Add idea to start this section.</div>')+
  '</section>';
 }
 
