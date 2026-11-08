@@ -169,7 +169,7 @@ function taskItem(t,compact=false){
  '</div>';
 }
 function taskSummary(){
- const all=todayTasks(),done=all.filter(taskDone).length;
+ const all=todayTasks(),done=all.filter(t=>taskDone(t)).length;
  return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(TODAY,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">What matters today</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished items remain visible tomorrow</p></div><button class="btn small" data-tab="tasks">All tasks →</button></div>'+
  '<form id="quickTaskForm" class="task-quick"><input type="text" name="title" maxlength="140" required aria-label="Quick add task" placeholder="Add something for today…"><button type="submit" class="btn primary">+ Add</button></form>'+
  '<div class="task-list">'+(all.length?all.slice(0,5).map(t=>taskItem(t,true)).join(''):'<div class="empty">Nothing on your list yet. Add one thing you want to accomplish today.</div>')+'</div>'+
@@ -180,7 +180,7 @@ function tasksPage(){
  const filter=ui.taskFilter;
  const visible=all.filter(t=>filter==='today'?taskOccurs(t):filter==='upcoming'?(t.repeat||'none')==='none'&&!t.done&&t.due>TODAY:filter==='done'?taskDone(t):true);
  const edit=all.find(t=>t.id===ui.editTaskId);
- const doneCount=todayTasks().filter(taskDone).length;
+ const doneCount=todayTasks().filter(t=>taskDone(t)).length;
  const buttons=[['today','Today'],['upcoming','Upcoming'],['all','All'],['done','Completed']];
  return header('Your tasks, in one place.','Make your list in the morning, check things off during the day, and leave unfinished items visible tomorrow. No notifications required.')+
  '<div class="grid"><section class="card span5"><div class="row spread"><h2>'+(edit?'Edit task':'Add a task')+'</h2>'+(edit?'<button class="btn small" data-task-cancel="1">Cancel</button>':'')+'</div>'+
