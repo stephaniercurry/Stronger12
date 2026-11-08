@@ -222,6 +222,100 @@ function tasksPage(){
  '<div class="task-list">'+(visible.length?visible.map(t=>taskItem(t)).join(''):'<div class="empty">No tasks in this view.</div>')+'</div>'+
  '<p class="fineprint" style="margin-top:18px">One-time tasks carry forward automatically if unfinished. Daily, weekday, weekly, and custom-interval tasks repeat on their scheduled days. Swipe a task left to reveal Delete.</p></section></div>';
 }
+
+const YOGA_KINDS=['Hot yoga','Yoga','Gentle / restorative','Other'];
+const GROCERY_CATEGORIES=['Produce','Protein & dairy','Pantry','Frozen','Household','Other'];
+function yogaThisWeek(){
+ const offset=(dateOf(TODAY).getDay()+6)%7,mon=addDays(TODAY,-offset),end=addDays(mon,6);
+ return state.yogaSessions.filter(y=>y.date>=mon&&y.date<=end);
+}
+function yogaTodayCard(){
+ const edit=state.yogaSessions.find(y=>y.id===ui.editYogaId),history=state.yogaSessions.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ const n=yogaThisWeek().length;
+ return '<section class="card span7"><div class="row spread wrap"><div><div class="kicker">FLEXIBLE MOVEMENT</div><h2 style="margin:6px 0">Log yoga on any day</h2><p class="tiny" style="margin:0">'+n+' yoga '+(n===1?'session':'sessions')+' this week · no fixed day required</p></div>'+
+ (edit?'<button class="btn small" data-yoga-cancel="1">Cancel edit</button>':'')+'</div>'+
+ '<form id="yogaForm" class="stack" style="margin-top:13px"><div class="inlinefields"><div class="field"><label for="yogaDate">Day you attended</label><input id="yogaDate" name="date" type="date" required max="'+h(TODAY)+'" value="'+h(edit?.date||ui.yogaDate)+'"></div>'+
+ '<div class="field"><label for="yogaMinutes">Minutes</label><input id="yogaMinutes" name="minutes" type="number" inputmode="numeric" min="1" max="600" step="1" required value="'+h(edit?.minutes||60)+'"></div></div>'+
+ '<div class="field"><label for="yogaKind">Class / style</label><select id="yogaKind" name="kind">'+YOGA_KINDS.map(k=>'<option '+((edit?.kind||'Hot yoga')===k?'selected':'')+'>'+h(k)+'</option>').join('')+'</select></div>'+
+ '<div class="field"><label for="yogaNotes">Notes (optional)</label><input id="yogaNotes" name="notes" maxlength="300" placeholder="Energy, recovery, how it felt…" value="'+h(edit?.notes||'')+'"></div>'+
+ '<button class="btn primary" type="submit">'+(edit?'Save yoga changes':'+ Log yoga session')+'</button></form>'+
+ '<div class="divider"></div><h3>Recent yoga</h3>'+
+ (history.length?'<div class="yoga-log">'+history.slice(0,5).map(y=>'<div class="yoga-entry"><div><strong>'+h(formatDate(y.date,{weekday:'short',month:'short',day:'numeric'}))+'</strong><div class="tiny">'+h(y.kind||'Yoga')+' · '+h(y.minutes)+' min'+(y.notes?' · '+h(y.notes):'')+'</div></div><div class="buttonrow"><button class="btn small" data-yoga-edit="'+h(y.id)+'">Edit</button><button class="btn small danger" data-yoga-delete="'+h(y.id)+'" aria-label="Delete yoga session">Delete</button></div></div>').join('')+'</div>':'<p class="tiny">When you go to yoga, log it here. It counts regardless of which day you choose.</p>')+'</section>';
+}
+function groceryNeeds(){return state.groceries.filter(x=>!x.checked)}
+function groceryText(){
+ const items=groceryNeeds();
+ return 'GROCERY LIST\n'+(items.length?items.map(x=>'☐ '+x.name+(x.quantity?' — '+x.quantity:'')+(x.category&&x.category!=='Other'?' ('+x.category+')':'')).join('\n'):'Nothing needed right now.')+'\n\nShared from Stronger / 12 · snapshot only; changes do not sync.';
+}
+async function shareGroceries(copyOnly=false){
+ if(!groceryNeeds().length){alert('Add something to the grocery list before sharing.');return}
+ const message=groceryText();
+ if(!copyOnly&&typeof navigator.share==='function'){
+  try{await navigator.share({title:'Grocery list',text:message});return}
+  catch(e){if(e&&e.name==='AbortError')return}
+ }
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  try{await navigator.clipboard.writeText(message);alert('Grocery list copied. Paste it into a message to share it.');return}catch(e){}
+ }
+ if(typeof prompt==='function')prompt('Copy your grocery list:',message);
+ else alert(message);
+}
+function groceryTodayCard(){
+ const open=groceryNeeds();
+ return '<section class="card span5"><div class="row spread"><div><div class="kicker">GROCERIES</div><h2 style="margin:6px 0">Shopping list</h2></div><span class="pill">'+open.length+' to buy</span></div>'+
+ (open.length?'<p class="tiny">'+open.slice(0,4).map(x=>h(x.name)).join(' · ')+(open.length>4?' · …':'')+'</p>':'<p class="tiny">Keep a running shopping list and share a copy by text.</p>')+
+ '<button class="btn small" data-tab="life">Open groceries →</button></section>';
+}
+function wheelDates(){
+ const seasonal=[
+ ['Imbolc','02-01','🕯️','Returning light, renewal and early hints of spring. Often observed Feb 1–2.',false],
+ ['Ostara','03-20','🌱','Spring equinox; balance, new growth and beginnings.',true],
+ ['Beltane','05-01','🔥','Flowers, creativity, vitality and the brighter half of the year.',false],
+ ['Litha','06-21','☀️','Summer solstice and the longest daylight of the year.',true],
+ ['Lughnasadh','08-01','🌾','First harvest; bread, gratitude and community.',false],
+ ['Mabon','09-22','🍂','Autumn equinox, harvest and transition.',true],
+ ['Samhain','10-31','🕯️','Ancestors, remembrance and the darker half of the year. Often Oct 31–Nov 1.',false],
+ ['Yule','12-21','❄️','Winter solstice, the longest night and returning light.',true]
+ ];
+ // Solar times in UTC, displayed in the phone's local time zone.
+ const solar={
+  2026:{Ostara:'2026-03-20T14:45:00Z',Litha:'2026-06-21T08:25:00Z',Mabon:'2026-09-23T00:05:00Z',Yule:'2026-12-21T20:50:00Z'},
+  2027:{Ostara:'2027-03-20T20:24:00Z',Litha:'2027-06-21T14:10:00Z',Mabon:'2027-09-23T06:01:00Z',Yule:'2027-12-22T02:42:00Z'},
+  2028:{Ostara:'2028-03-20T02:17:00Z',Litha:'2028-06-20T20:01:00Z',Mabon:'2028-09-22T11:45:00Z',Yule:'2028-12-21T08:20:00Z'}
+ };
+ const yearNow=Number(TODAY.slice(0,4)),all=[];
+ for(let year=yearNow;year<=yearNow+2;year++){
+  for(const [name,monthDay,emoji,meaning,isSolar] of seasonal){
+   const instant=solar[year]&&solar[year][name],date=isSolar&&instant?iso(new Date(instant)):year+'-'+monthDay;
+   if(date>=TODAY)all.push({name,date,emoji,meaning,approx:isSolar&&!instant});
+  }
+ }
+ return all.sort((a,b)=>a.date.localeCompare(b.date)).slice(0,12);
+}
+function wheelTodayCard(){
+ const items=wheelDates().slice(0,2);
+ return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">SEASONAL CALENDAR</div><h2 style="margin:6px 0">Wheel of the Year</h2></div><button class="btn small" data-tab="life">See all dates →</button></div><div class="holiday-mini">'+items.map(x=>'<div class="holiday-item"><span class="holiday-emoji">'+x.emoji+'</span><div><strong>'+h(x.name)+'</strong><div class="tiny">'+h(formatDate(x.date,{weekday:'short',month:'short',day:'numeric',year:'numeric'}))+' · '+daysBetween(TODAY,x.date)+' days away</div></div></div>').join('')+'</div><p class="fineprint" style="margin:12px 0 0">Common Northern Hemisphere modern Pagan/Wiccan dates; observance varies by tradition.</p></section>';
+}
+function lifePage(){
+ const open=groceryNeeds(),done=state.groceries.filter(x=>x.checked),edit=state.groceries.find(x=>x.id===ui.editGroceryId),entries=open.concat(done),holidays=wheelDates().slice(0,8);
+ return header('Life outside the gym.','Groceries, seasons and the small things that make the day easier.')+
+ '<div class="grid"><section class="card span7"><div class="row spread wrap"><div><div class="kicker">GROCERY LIST</div><h2 style="margin:5px 0">What do we need?</h2><p class="tiny" style="margin:0">'+open.length+' to buy · '+done.length+' in the cart</p></div><div class="buttonrow"><button class="btn small" data-grocery-share="1">↗ Share list</button><button class="btn small" data-grocery-copy="1">Copy</button></div></div>'+
+ '<form id="groceryForm" class="stack" style="margin:16px 0"><div class="field"><label for="groceryName">Item</label><input id="groceryName" name="name" maxlength="110" required placeholder="Milk, spinach, protein powder…" value="'+h(edit?.name||'')+'"></div>'+
+ '<div class="inlinefields"><div class="field"><label for="groceryQuantity">Quantity / size (optional)</label><input id="groceryQuantity" name="quantity" maxlength="60" placeholder="2 cartons, 1 lb…" value="'+h(edit?.quantity||'')+'"></div>'+
+ '<div class="field"><label for="groceryCategory">Aisle</label><select id="groceryCategory" name="category">'+GROCERY_CATEGORIES.map(cat=>'<option '+((edit?.category||'Other')===cat?'selected':'')+'>'+h(cat)+'</option>').join('')+'</select></div></div>'+
+ '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save item':'+ Add to groceries')+'</button>'+(edit?'<button type="button" class="btn" data-grocery-cancel="1">Cancel</button>':'')+'</div></form>'+
+ '<div class="grocery-rows">'+(entries.length?entries.map(x=>'<div class="grocery-row'+(x.checked?' is-bought':'')+'"><button type="button" class="grocery-check" data-grocery-check="'+h(x.id)+'" aria-label="'+h((x.checked?'Mark not bought: ':'Mark bought: ')+x.name)+'" aria-pressed="'+!!x.checked+'">'+(x.checked?'✓':'')+'</button><div class="grocery-name"><strong>'+h(x.name)+'</strong><div class="tiny">'+h(x.quantity||'')+(x.quantity?' · ':'')+h(x.category||'Other')+'</div></div><button class="btn small" data-grocery-edit="'+h(x.id)+'">Edit</button><button class="btn small danger" data-grocery-delete="'+h(x.id)+'" aria-label="Remove '+h(x.name)+'">×</button></div>').join(''):'<div class="empty">Your list is empty. Add an item to begin.</div>')+'</div>'+
+ (done.length?'<button class="btn small" data-grocery-clear="1" style="margin-top:15px">Clear '+done.length+' purchased '+(done.length===1?'item':'items')+'</button>':'')+
+ '<div class="notice" style="margin-top:17px"><strong>Sharing:</strong> Share list sends the current unpurchased items through your iPhone Share menu. Your son receives a copy, not a live synchronized list. Groceries stay private on your phone unless you choose to send them.</div></section>'+
+ '<section class="card span5"><div class="kicker">SEASONAL CALENDAR</div><h2 style="margin:5px 0">Upcoming Pagan holidays</h2><p class="tiny">Modern Northern Hemisphere Wheel of the Year</p>'+
+ '<div class="festival-list">'+holidays.map(x=>'<div class="festival"><span class="holiday-emoji">'+x.emoji+'</span><div><strong>'+h(x.name)+'</strong><div class="tiny">'+h(formatDate(x.date,{month:'short',day:'numeric',year:'numeric'}))+(x.approx?' · approximate':'')+'</div><p class="fineprint" style="margin:3px 0 0">'+h(x.meaning)+'</p></div></div>').join('')+'</div>'+
+ '<p class="fineprint" style="margin-top:15px">These are common observances, not universal Pagan holidays. Equinox and solstice dates use local astronomical times for 2026–2028; later solar dates are approximate. Dates and practices vary.</p>'+
+ '<a href="https://orsl.usc.edu/life/pagan-wicca-holy-days-calendar/" target="_blank" rel="noopener noreferrer" class="btn small">About these holy days ↗</a></section></div>';
+}
+function yogaProgressCard(){
+ return '<section class="card span4"><div class="kicker">Yoga sessions logged</div><div class="metric">'+state.yogaSessions.length+'</div><p class="tiny">'+yogaThisWeek().length+' this week · on whatever days worked for you.</p></section>';
+}
+
 function dashboard(){const w=currentWeek(),t=dailyTotals(TODAY),count=Object.values(state.workouts).filter(s=>s.completed).length;const dates=Array.from({length:7},(_,i)=>addDays(TODAY,i-6));return header('One day at a time.','Your tasks, training and nutrition together — no app switching required.')+`<div class="grid">
  ${taskSummary()}
  <section class="card dark span7"><div class="eyebrow" style="color:#b1d9be">YOUR WEEKLY RHYTHM</div><h2 style="font-size:28px">Train in the afternoon.<br>Keep the weekends free.</h2><p>Yoga Monday and Wednesday at 5:30 PM. Strength on Tuesday, Thursday, and Friday afternoons.</p>${weeklyCalendar()}<div class="buttonrow" style="margin-top:22px"><button class="btn solidlight" data-tab="lift">Open this week's workouts →</button></div></section>
