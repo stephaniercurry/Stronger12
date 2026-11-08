@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Stronger 12">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<meta name="description" content="A private, subscription-free, 12-week strength and protein + fiber tracker.">
+<meta name="description" content="A private, subscription-free daily hub for tasks, groceries, strength, yoga and food.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Stronger 12">
@@ -36,7 +36,7 @@
 <aside class="sidebar">
   <div class="brand"><div class="brandmark">S</div><div><div class="brandname">STRONGER <span style="color:#9ee3b6">/12</span></div><div class="brandsub">Your strength, your pace</div></div></div>
   <nav class="nav" id="desktopNav" aria-label="Sections"></nav>
-  <div class="sidefooter">TUE · THU · FRI strength<br>MON · WED yoga at 5:30 PM<br>WEEKENDS ARE YOURS<br><br>Private by default. No subscription.</div>
+  <div class="sidefooter">TUE · THU · FRI planned strength<br>YOGA ON YOUR SCHEDULE<br>WEEKENDS ARE YOURS<br><br>Private by default. No subscription.</div>
 </aside>
 <main class="main"><div id="appView"></div><div class="foot">Stronger / 12 · Works offline after installation · Entries auto-save on this device · Back up to iCloud Files in Settings.</div></main>
 </div>
@@ -133,8 +133,8 @@ function exerciseHint(id,w){const ex=EX[id],prev=previous(id,w);if(!prev)return 
 function dailyTotals(date){return state.foods.filter(f=>f.date===date).reduce((a,f)=>(a.protein+=Number(f.protein)||0,a.fiber+=Number(f.fiber)||0,a),{protein:0,fiber:0})}
 function prog(val,goal,kind){return `<div class="progress ${kind||''}"><span style="width:${Math.min(100,(goal?100*val/goal:0))}%"></span></div>`}
 function pillStatus(w){const count=['tue','thu','fri'].filter(d=>getSession(w,d).completed).length;return count===3?'<span class="badgecomplete">✓ All lifts logged</span>':`<span class="pill">${count} / 3 lifts completed</span>`}
-function weeklyCalendar(){const w=currentWeek();return `<div class="weekstrip">${['M','T','W','T','F','S','S'].map((label,i)=>{const date=addDays(weekDate(w),i),isLift=[1,3,4].includes(i),yogaLogged=state.yogaSessions.some(x=>x.date===date);return `<div class="${yogaLogged?'yoga':isLift?'lift':'off'}"><b>${label}</b><small>${yogaLogged?'Yoga ✓':isLift?'Lift':i>=5?'Free':'Flex'}</small></div>`}).join('')}</div>`}
-function header(title,subtitle){return `<div class="masthead"><div><div class="eyebrow">YOUR PRIVATE TRAINING JOURNAL</div><h1>${title}</h1><p class="lead">${subtitle}</p></div><span class="pill">Week ${currentWeek()} / 12</span></div>${storageFailed?'<div id="storageWarn" class="notice warn">Browser storage is unavailable. Export a JSON backup regularly; entries may not persist here.</div>':''}`}
+function weeklyCalendar(){const w=currentWeek();return `<div class="weekstrip">${['M','T','W','T','F','S','S'].map((label,i)=>{const date=addDays(weekDate(w),i),isLift=[1,3,4].includes(i),yogaLogged=state.yogaSessions.some(x=>x.date===date);return `<div class="${yogaLogged?'yoga':isLift?'lift':'off'}"><b>${label}</b><small>${yogaLogged?(isLift?'Lift+Yoga ✓':'Yoga ✓'):isLift?'Lift':i>=5?'Free':'Flex'}</small></div>`}).join('')}</div>`}
+function header(title,subtitle){return `<div class="masthead"><div><div class="eyebrow">YOUR PRIVATE DAILY HUB</div><h1>${title}</h1><p class="lead">${subtitle}</p></div><span class="pill">Week ${currentWeek()} / 12</span></div>${storageFailed?'<div id="storageWarn" class="notice warn">Browser storage is unavailable. Export a JSON backup regularly; entries may not persist here.</div>':''}`}
 function weekSelect(){return `<div class="weekpicker noprint"><button class="btn small" data-week-step="-1" ${ui.week<=1?'disabled':''} aria-label="Previous week">‹</button><select id="weekPick" aria-label="Program week">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${ui.week===i+1?'selected':''}>Week ${i+1}</option>`).join('')}</select><button class="btn small" data-week-step="1" ${ui.week>=12?'disabled':''} aria-label="Next week">›</button></div>`}
 
 const TASK_REPEATS={none:'One time',daily:'Every day',weekdays:'Weekdays',weekly:'Every week',interval:'Every N days'};
