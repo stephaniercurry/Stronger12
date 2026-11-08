@@ -554,7 +554,7 @@ function dashboard(){const t=dailyTotals(TODAY);return header('One day at a time
  ${taskSummary()}
  ${agendaTodayCard()}
  ${groceryTodayCard()}
- <section class="card dark span7"><div class="eyebrow" style="color:#b1d9be">YOUR WEEKLY RHYTHM</div><h2 style="font-size:28px">Plan your lifts.<br>Fit yoga around life.</h2><p>Yoga whenever it works for you. Strength training stays planned for Tuesday, Thursday and Friday; weekends stay free of required workouts.</p>${weeklyCalendar()}<div class="buttonrow" style="margin-top:22px"><button class="btn solidlight" data-tab="lift">Open this week's workouts →</button></div></section>
+ <section class="card dark span7"><h2 style="font-size:22px;margin:0 0 16px">Weekly rhythm</h2>${weeklyCalendar()}<div class="buttonrow" style="margin-top:18px"><button class="btn solidlight" data-tab="lift">Open this week's workouts →</button></div></section>
  <section class="card span5"><div class="row spread"><div class="kicker">Today's nutrition</div><span class="tiny">${formatDate(TODAY)}</span></div><div style="margin-top:15px"><div class="daily-row"><span>Protein</span><strong>${fmt(t.protein,1)} <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}<div class="daily-row"><span>Fiber</span><strong>${fmt(t.fiber,1)} <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div><button class="btn small" data-tab="food">Log food →</button></section>
  </div>`}
 
