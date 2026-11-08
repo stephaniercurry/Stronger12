@@ -334,7 +334,7 @@ function birthdayLabel(evt){
  return parts.join(' · ');
 }
 function birthdayTodayCard(){
- const week=weekBirthdayEvents(),next=birthdayEvents(TODAY,90).slice(0,2);
+ const week=weekBirthdayEvents(),next=birthdayEvents(TODAY,370).slice(0,2);
  let events=week.length?week:next;
  return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">PEOPLE WHO MATTER</div><h2 style="margin:6px 0">'+(week.length?"Birthdays this week":"Birthdays coming up")+'</h2></div><button class="btn small" data-tab="life">Manage birthdays →</button></div>'+
  (events.length?'<div class="birthday-preview">'+events.slice(0,4).map(e=>'<div class="birthday-chip"><span class="birthday-emoji">🎂</span><div><strong>'+h(e.person.name)+'</strong><div class="tiny">'+h(formatDate(e.date,{weekday:'short',month:'short',day:'numeric'}))+(e.date===TODAY?' · Today!':'')+(e.age!==null?' · '+h(e.age)+' years':'')+'</div></div></div>').join('')+'</div>':
@@ -353,7 +353,7 @@ function birthdayManagerCard(){
  '<div class="inlinefields"><div class="field"><label for="birthdayYear">Birth year (optional)</label><input id="birthdayYear" name="year" type="number" min="1800" max="'+yearNow+'" inputmode="numeric" placeholder="Leave blank if unknown" value="'+h(edit?.year||'')+'"></div>'+
  '<div class="field"><label for="birthdayRelation">Group</label><select id="birthdayRelation" name="relation">'+BIRTHDAY_RELATIONS.map(x=>'<option '+((edit?.relation||'Family')===x?'selected':'')+'>'+h(x)+'</option>').join('')+'</select></div></div>'+
  '<button class="btn primary" type="submit">'+(edit?'Save birthday changes':'+ Add birthday')+'</button></form>'+
- '<p class="fineprint" style="margin-top:12px">A birth year is optional. If included, the app can show their upcoming age. Birthdays stay private on this phone and in your backups.</p></div>'+
+ '<p class="fineprint" style="margin-top:12px">A birth year is optional. If included, the app can show their upcoming age. Feb 29 birthdays appear on Feb 28 in non-leap years. Birthdays stay private on this phone and in your backups.</p></div>'+
  '<div class="span7"><h3>Next birthdays</h3>'+
  (upcoming.length?'<div class="birthday-upcoming">'+upcoming.map(e=>'<div class="birthday-row"><span class="birthday-emoji">🎂</span><div><strong>'+h(e.person.name)+'</strong><div class="tiny">'+h(formatDate(e.date,{weekday:'short',month:'short',day:'numeric'}))+(e.age!==null?' · Turning '+e.age:'')+'</div></div></div>').join('')+'</div>':
  '<div class="empty">No upcoming birthdays yet.</div>')+'</div></div>'+
