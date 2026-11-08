@@ -476,6 +476,7 @@ function agendaTodayCard(){
  }));
  const events=personal.concat(inWeek).sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||String(a.time||'').localeCompare(String(b.time||''))||String(a.title).localeCompare(String(b.title)));
  const today=events.filter(e=>e.start<=TODAY&&e.end>=TODAY),week=events.filter(e=>e.start>TODAY);
+ const todayShown=today.slice(0,5),weekShown=week.slice(0,7);
  const holidayRow=(x)=>{
   return '<div class="agenda-event"><span class="agenda-emoji">'+x.emoji+'</span><div><strong>'+h(x.title||x.name)+'</strong>'+
    '<div class="tiny">'+h(formatDate(x.start||x.date,{weekday:'short',month:'short',day:'numeric',year:'numeric'}))+
@@ -486,12 +487,13 @@ function agendaTodayCard(){
  };
  const row=e=>e.type==='holiday'?holidayRow(e):
   '<div class="agenda-event"><span class="agenda-emoji">'+IMPORTANT_TYPES[e.type].emoji+'</span><div><strong>'+h(e.title)+'</strong><div class="tiny">'+importantEntryText(e,true)+'</div></div></div>';
- const nextPanel=next&&next.date>limit?
+ const nextIsShown=next&&todayShown.concat(weekShown).some(e=>e.type==='holiday'&&e.title===next.name&&e.start===next.date);
+ const nextPanel=next&&!nextIsShown?
    '<div class="next-holiday"><div class="kicker">NEXT PAGAN HOLIDAY · '+h(daysBetween(TODAY,next.date))+' DAYS AWAY</div>'+
    holidayRow(next)+'</div>':'';
  return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Important dates →</button></div>'+
- '<div class="agenda-cols"><div><h3>Today</h3>'+(today.length?today.slice(0,5).map(row).join(''):'<p class="tiny">Nothing scheduled for today.</p>')+'</div>'+
- '<div><h3>Coming up · next 7 days</h3>'+(week.length?week.slice(0,7).map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
+ '<div class="agenda-cols"><div><h3>Today</h3>'+(today.length?todayShown.map(row).join(''):'<p class="tiny">Nothing scheduled for today.</p>')+'</div>'+
+ '<div><h3>Coming up · next 7 days</h3>'+(week.length?weekShown.map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
  nextPanel+
  '<p class="fineprint" style="margin:12px 0 0">Modern Pagan/Wiccan Wheel of the Year holidays appear automatically; observances vary by tradition. Personal events stay private on your phone and do not sync with your work calendar.</p></section>';
 }
