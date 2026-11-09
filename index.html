@@ -862,6 +862,40 @@ const IMPORTANT_TYPES={
 function validCalendarDate(s){
  return /^\d{4}-\d{2}-\d{2}$/.test(String(s))&&iso(dateOf(s))===s;
 }
+const EVENT_REPEATS={none:'Does not repeat',daily:'Every day',weekly:'Every week',biweekly:'Every 2 weeks',monthly:'Every month',yearly:'Every year'};
+const EVENT_WEEKDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function eventWeeklyDays(item){
+ const a=Array.isArray(item.repeatDays)?item.repeatDays.filter(d=>Number.isInteger(d)&&d>=0&&d<=6):[];
+ return a.length?[...new Set(a)].sort((x,y)=>x-y):[dateOf(item.start).getDay()];
+}
+function eventOccursOn(item,date){
+ if(!validCalendarDate(item.start)||date<item.start)return false;
+ if(validCalendarDate(item.repeatUntil)&&date>item.repeatUntil)return false;
+ const kind=item.repeat||'none';
+ if(kind==='daily')return true;
+ if(kind==='weekly'||kind==='biweekly'){
+  const dow=dateOf(date).getDay();
+  if(!eventWeeklyDays(item).includes(dow))return false;
+  if(kind==='weekly')return true;
+  const sm=addDays(item.start,-((dateOf(item.start).getDay()+6)%7));
+  const dm=addDays(date,-((dow+6)%7));
+  return Math.round(daysBetween(sm,dm)/7)%2===0;
+ }
+ if(kind==='monthly'){
+  const d=dateOf(date),last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  return d.getDate()===Math.min(Number(item.start.slice(8,10)),last);
+ }
+ if(kind==='yearly')return date.slice(5)===item.start.slice(5);
+ return date===item.start;
+}
+function eventRepeatText(item){
+ const kind=item?.repeat||'none';
+ if(kind==='none'||!Object.hasOwn(EVENT_REPEATS,kind))return '';
+ let text=EVENT_REPEATS[kind];
+ if(kind==='weekly'||kind==='biweekly')text+=' · '+eventWeeklyDays(item).map(d=>EVENT_WEEKDAYS[d]).join(', ');
+ if(validCalendarDate(item.repeatUntil))text+=' · until '+formatDate(item.repeatUntil,{month:'short',day:'numeric',year:'numeric'});
+ return text;
+}
 function importantOccurrences(from=TODAY,days=370){
  const end=addDays(from,days),result=[];
  for(const occurrence of birthdayEvents(from,days)){
@@ -874,14 +908,22 @@ function importantOccurrences(from=TODAY,days=370){
  }
  for(const item of state.importantEvents){
   if(!item||!validCalendarDate(item.start))continue;
-  const ending=validCalendarDate(item.end)&&item.end>=item.start?item.end:item.start;
-  if(ending<from||item.start>end)continue;
-  result.push({
-   id:'event:'+item.id,type:IMPORTANT_TYPES[item.type]?item.type:'other',
-   title:item.title,start:item.start,end:ending,
-   sortDate:item.start<from?from:item.start,time:item.time||'',
-   notes:item.notes||'',age:null,original:item
-  });
+  const type=IMPORTANT_TYPES[item.type]?item.type:'other';
+  const kind=Object.hasOwn(EVENT_REPEATS,item.repeat)?item.repeat:'none';
+  if(kind==='none'){
+   const ending=validCalendarDate(item.end)&&item.end>=item.start?item.end:item.start;
+   if(ending<from||item.start>end)continue;
+   result.push({id:'event:'+item.id,type,title:item.title,start:item.start,end:ending,
+    sortDate:item.start<from?from:item.start,time:item.time||'',notes:item.notes||'',age:null,original:item});
+   continue;
+  }
+  const first=from>item.start?from:item.start;
+  const last=validCalendarDate(item.repeatUntil)&&item.repeatUntil<end?item.repeatUntil:end;
+  for(let date=first;date<=last;date=addDays(date,1)){
+   if(!eventOccursOn(item,date))continue;
+   result.push({id:'event:'+item.id,type,title:item.title,start:date,end:date,
+    sortDate:date,time:item.time||'',notes:item.notes||'',age:null,original:item});
+  }
  }
  return result.sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||a.time.localeCompare(b.time)||String(a.title).localeCompare(String(b.title)));
 }
@@ -891,7 +933,7 @@ function importantEntryText(e,short=false){
   formatDate(e.start,{weekday:short?'short':'long',month:'short',day:'numeric'});
  const other=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
  const tm=e.time?' · '+h(e.time):'';
- return h(label)+tm+other;
+ return h(label)+tm+other+(e.original?.repeat&&e.original.repeat!=='none'?' · '+h(eventRepeatText(e.original)):'');
 }
 function agendaTodayCard(){
  const limit=addDays(TODAY,7),personal=importantOccurrences(TODAY,7);
@@ -972,7 +1014,7 @@ function importantDatesPanel(){
   const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
   const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
   const time=e.time?' · '+e.time:'';
-  const summary=itemType.label+time+age+span;
+  const summary=itemType.label+time+age+span+(e.original?.repeat&&e.original.repeat!=='none'?' · '+eventRepeatText(e.original):'');
   return '<div class="task-swipe event-swipe'+(revealed?' is-revealed':'')+'" data-event-swipe="'+h(e.id)+'">'+
    '<div class="task-swipe-actions">'+
    '<button type="button" class="task-edit-reveal" data-important-edit="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(e.title)+'">Edit</button>'+
@@ -1522,7 +1564,7 @@ if(b.dataset.importantDelete){
  const source=kind==='birthday'?state.birthdays:state.importantEvents;
  const target=source.find(x=>x.id===id);
  if(!target)return;
- if(confirm('Delete '+(target.name||target.title)+' from your important dates?')){
+ if(confirm(target.repeat&&target.repeat!=='none'?'Delete every occurrence of '+target.title+'?':'Delete '+(target.name||target.title)+' from your important dates?')){
   if(kind==='birthday')state.birthdays=source.filter(x=>x.id!==id);
   else state.importantEvents=source.filter(x=>x.id!==id);
   if(ui.editBirthdayId===id)ui.editBirthdayId=null;
