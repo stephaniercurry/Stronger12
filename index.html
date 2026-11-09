@@ -410,6 +410,27 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .recipe-panel-body{border-top:1px solid var(--line);padding-top:17px;margin-top:14px}
 .recipe-panel-body .recipe-tabs{margin-top:0}
 @media(max-width:760px){.recipe-panel-title{font-size:20px}.recipe-panel-right{gap:8px}.recipe-panel-right .dinner-emblem{width:42px;height:42px;flex-basis:42px}}
+
+/* Selected recipe ideas are an ephemeral checklist, not a meal log. */
+.dinner-week-toggle{flex:0 0 auto;min-height:39px;white-space:nowrap;padding:7px 9px;border:1px solid #d3e6e5;border-radius:10px;color:#287379;background:#f3faf9;font-size:12px;font-weight:800}
+.dinner-week-toggle.is-selected{background:#d9eeec;border-color:#98cccb;color:#1f666a}
+.dinner-week-toggle:focus-visible{outline:3px solid #83bebd;outline-offset:2px}
+.week-food-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:transparent;color:var(--ink);border:0;padding:0;min-height:60px}
+.week-food-heading{display:grid;gap:4px;min-width:0}
+.week-food-title{font-size:20px;font-weight:850;letter-spacing:-.4px;line-height:1.25}
+.week-food-arrow{font-size:24px;color:var(--green);font-weight:800}
+.week-food-toggle:focus-visible{outline:3px solid #83bebd;outline-offset:5px;border-radius:8px}
+.week-food-body{border-top:1px solid var(--line);margin-top:14px;padding-top:9px}
+.week-food-list{display:grid}
+.week-food-row{display:flex;gap:12px;align-items:center;min-height:56px;padding:8px 0;border-bottom:1px solid var(--line)}
+.week-food-row:last-child{border-bottom:0}
+.week-food-done{width:40px;height:40px;flex:0 0 40px;border:2px solid #91c3b9;border-radius:12px;background:#fff;color:#297c77;font-size:23px;font-weight:850}
+.week-food-done:hover{background:#e7f5f2}
+.week-food-name{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:750;text-align:left;padding:8px 0;overflow-wrap:anywhere}
+.week-food-name:hover{color:var(--green)}
+.week-food-hint,.week-food-empty{margin:12px 0}
+.week-food-browse{margin-top:7px}
+@media(max-width:430px){.dinner-row{flex-wrap:wrap}.dinner-row .dinner-item-name{flex:1 1 100%;min-height:28px}.dinner-row .dinner-week-toggle{flex-shrink:0}.dinner-row .dinner-more{margin-left:auto}.week-food-title{font-size:19px}}
 </style>
 </head>
 <body>
@@ -438,9 +459,9 @@ function formatDate(s,opts){return dateOf(s).toLocaleDateString(undefined,opts||
 function h(v){return String(v===undefined||v===null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(n,dp=0){return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:dp})}
 const defaultSettings={startDate:nextMonday(),proteinGoal:130,fiberGoal:30,weightUnit:'lb',upperIncrement:2.5,lowerIncrement:5};
-let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],moneyEnvelopes:[],moneyHistory:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
+let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],weekFoodIdeas:[],moneyEnvelopes:[],moneyHistory:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
 let storageFailed=false;
-try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],moneyEnvelopes:Array.isArray(obj.moneyEnvelopes)?obj.moneyEnvelopes:[],moneyHistory:Array.isArray(obj.moneyHistory)?obj.moneyHistory:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
+try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],weekFoodIdeas:Array.isArray(obj.weekFoodIdeas)?obj.weekFoodIdeas.filter(id=>typeof id==='string'):[],moneyEnvelopes:Array.isArray(obj.moneyEnvelopes)?obj.moneyEnvelopes:[],moneyHistory:Array.isArray(obj.moneyHistory)?obj.moneyHistory:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
 const PROGRAM_OPTIONS={
  foundation:{label:'Foundations',description:'The original full-body, upper-body and lower-body program, with simple progression and recovery weeks.'},
  builder:{label:'Strength Builder',description:'A new 12-week block with more upper/lower strength emphasis using familiar home or gym exercises.'},
@@ -545,7 +566,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -995,6 +1016,26 @@ function recipeCategory(idea){return RECIPE_CATEGORIES.some(([k])=>k===idea?.cat
 function dinnerIngredients(idea){
  return String(idea?.ingredients||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,100);
 }
+function chosenWeekRecipes(){
+ const order=state.weekFoodIdeas;
+ return state.dinnerIdeas.filter(x=>order.includes(x.id)).sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));
+}
+function weekFoodTodayCard(){
+ const recipes=chosenWeekRecipes(),open=ui.weekFoodOpen;
+ return '<section class="card span12 week-food-card" id="weekFoodTodaySection">'+
+ '<button type="button" class="week-food-toggle" data-week-food-toggle="1" aria-expanded="'+open+'" aria-controls="weekFoodTodayBody">'+
+ '<span class="week-food-heading"><span class="kicker">MEAL INSPIRATION</span><span class="week-food-title">This week’s food ideas</span>'+
+ '<span class="tiny">'+recipes.length+' '+(recipes.length===1?'idea':'ideas')+' selected</span></span>'+
+ '<span class="week-food-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></button>'+
+ (open?'<div class="week-food-body" id="weekFoodTodayBody">'+
+ (recipes.length?'<div class="week-food-list">'+recipes.map(idea=>
+ '<div class="week-food-row"><button type="button" class="week-food-done" data-week-food-remove="'+h(idea.id)+'" aria-label="Remove '+h(idea.name)+' from this week" title="Done with this idea">✓</button>'+
+ '<button type="button" class="week-food-name" data-week-food-recipe="'+h(idea.id)+'" title="View saved recipe for '+h(idea.name)+'">'+h(idea.name)+'</button></div>').join('')+'</div>'+
+ '<p class="tiny week-food-hint">Tap an idea to view its recipe. Tap ✓ to take it off the list when it’s no longer needed.</p>':
+ '<p class="tiny week-food-empty">Nothing picked yet. Choose a few ideas from your Recipe Book.</p>')+
+ '<button type="button" class="btn small week-food-browse" data-week-food-browse="1">'+(recipes.length?'Change ideas in Recipe Book →':'Open Recipe Book →')+'</button>'+
+ '</div>':'')+'</section>';
+}
 function dinnerIdeasPanel(){
  const inCategory=state.dinnerIdeas.filter(x=>recipeCategory(x)===ui.recipeTab);
  const occupied=RECIPE_SUBTYPES[ui.recipeTab].filter(([key])=>inCategory.some(x=>recipeSubtype(x)===key));
@@ -1005,7 +1046,7 @@ function dinnerIdeasPanel(){
  return '<section class="card span12" id="dinnerIdeasSection">'+
  '<button type="button" class="recipe-panel-toggle" data-recipe-toggle="1" aria-expanded="'+open+'" aria-controls="recipePanelBody">'+
  '<span class="recipe-panel-heading"><span class="kicker">YOUR LITTLE RECIPE BOOK</span><span class="recipe-panel-title">Recipe book</span>'+
- '<span class="tiny">'+state.dinnerIdeas.length+' saved · ideas for every kind of meal</span></span>'+
+ '<span class="tiny">'+state.dinnerIdeas.length+' saved · '+chosenWeekRecipes().length+' picked for this week</span></span>'+
  '<span class="recipe-panel-right"><span class="dinner-emblem" aria-hidden="true">🍲</span>'+
  '<span class="recipe-panel-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></span></button>'+
  (open?'<div class="recipe-panel-body" id="recipePanelBody">'+
@@ -1033,7 +1074,7 @@ function dinnerIdeasPanel(){
  (ideas.length?'<div class="dinner-ideas-list">'+ideas.map(x=>{
   const ingredients=dinnerIngredients(x);
   const safeLink=/^https?:\/\/[^\s]+$/i.test(x.url||'')?x.url:'';
-  const revealed=ui.swipedDinnerId===x.id,expanded=ui.expandedDinnerId===x.id;
+  const revealed=ui.swipedDinnerId===x.id,expanded=ui.expandedDinnerId===x.id,chosen=state.weekFoodIdeas.includes(x.id);
   const hasDetails=!!(x.notes||ingredients.length);
   return '<div class="dinner-list-entry">'+
    '<div class="dinner-swipe'+(revealed?' is-revealed':'')+'" data-dinner-swipe="'+h(x.id)+'">'+
@@ -1044,6 +1085,7 @@ function dinnerIdeasPanel(){
    (hasDetails?'<button type="button" class="dinner-item-name" data-dinner-expand="'+h(x.id)+'" aria-expanded="'+expanded+'" aria-label="'+(expanded?'Hide details for ':'Show details for ')+h(x.name)+'"><span>'+h(x.name)+'</span><span class="dinner-expand-icon" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>':
      '<strong class="dinner-item-name">'+h(x.name)+'</strong>')+
    (safeLink?'<a class="dinner-recipe-link" href="'+h(safeLink)+'" rel="noopener noreferrer" target="_blank" aria-label="Open recipe for '+h(x.name)+'">Recipe ↗</a>':'')+
+   '<button type="button" class="dinner-week-toggle'+(chosen?' is-selected':'')+'" data-week-idea-toggle="'+h(x.id)+'" aria-pressed="'+chosen+'" aria-label="'+h(chosen?'Remove ':'Add ')+h(x.name)+h(chosen?' from':' to')+' this week’s food ideas">'+(chosen?'✓ This week':'+ This week')+'</button>'+
    '<button type="button" class="dinner-more" data-dinner-reveal="'+h(x.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(x.name)+'" title="Swipe left for Edit or Delete">···</button>'+
    '</div></div>'+
    (expanded&&hasDetails?'<div class="dinner-detail">'+
@@ -1177,6 +1219,7 @@ function dashboard(){const t=dailyTotals(TODAY);return header('One day at a time
  ${taskSummary()}
  ${agendaTodayCard()}
  ${groceryTodayCard()}
+ ${weekFoodTodayCard()}
  <section class="card dark span7"><h2 style="font-size:22px;margin:0 0 16px">Weekly rhythm</h2>${weeklyCalendar()}<div class="buttonrow" style="margin-top:18px"><button class="btn solidlight" data-tab="lift">Open this week's workouts →</button></div></section>
  <section class="card span5"><div class="row spread"><div class="kicker">Today's nutrition</div><span class="tiny">${formatDate(TODAY)}</span></div><div style="margin-top:15px"><div class="daily-row"><span>Protein</span><strong>${fmt(t.protein,1)} <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}<div class="daily-row"><span>Fiber</span><strong>${fmt(t.fiber,1)} <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div><button class="btn small" data-tab="food">Log food →</button></section>
  ${moneyTodayCard()}
@@ -1428,6 +1471,26 @@ if(b.dataset.birthdayDelete){const i=state.birthdays.findIndex(x=>x.id===b.datas
 if(b.dataset.yogaEdit){ui.editYogaId=b.dataset.yogaEdit;ui.tab='lift';render();window.scrollTo(0,0);return}
 if(b.dataset.yogaCancel){ui.editYogaId=null;render();return}
 if(b.dataset.yogaDelete){const i=state.yogaSessions.findIndex(y=>y.id===b.dataset.yogaDelete);if(i>=0&&confirm('Delete this yoga entry?')){state.yogaSessions.splice(i,1);if(ui.editYogaId===b.dataset.yogaDelete)ui.editYogaId=null;save();render()}return}
+if(b.dataset.weekFoodToggle){ui.weekFoodOpen=!ui.weekFoodOpen;render();return}
+if(b.dataset.weekIdeaToggle){
+ const id=b.dataset.weekIdeaToggle;
+ if(!state.dinnerIdeas.some(x=>x.id===id))return;
+ state.weekFoodIdeas=state.weekFoodIdeas.includes(id)?state.weekFoodIdeas.filter(x=>x!==id):[...state.weekFoodIdeas,id];
+ save();render();return
+}
+if(b.dataset.weekFoodRemove){
+ const id=b.dataset.weekFoodRemove;
+ if(!state.weekFoodIdeas.includes(id))return;
+ state.weekFoodIdeas=state.weekFoodIdeas.filter(x=>x!==id);save();render();return
+}
+if(b.dataset.weekFoodBrowse||b.dataset.weekFoodRecipe){
+ const idea=b.dataset.weekFoodRecipe?state.dinnerIdeas.find(x=>x.id===b.dataset.weekFoodRecipe):null;
+ if(b.dataset.weekFoodRecipe&&!idea)return;
+ ui.tab='life';ui.recipeOpen=true;ui.editDinnerId=null;ui.swipedDinnerId=null;
+ if(idea){ui.recipeTab=recipeCategory(idea);ui.recipeSubtype='all';ui.expandedDinnerId=idea.id}
+ else ui.expandedDinnerId=null;
+ render();document.getElementById('dinnerIdeasSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+}
 if(b.dataset.recipeToggle){
  ui.recipeOpen=!ui.recipeOpen;
  if(!ui.recipeOpen){ui.editDinnerId=null;ui.swipedDinnerId=null;ui.expandedDinnerId=null;ui.dinnerNotice=''}
@@ -1456,6 +1519,7 @@ if(b.dataset.dinnerDelete){
  const idea=state.dinnerIdeas.find(x=>x.id===b.dataset.dinnerDelete);
  if(idea&&confirm('Delete recipe idea: '+idea.name+'?')){
   state.dinnerIdeas=state.dinnerIdeas.filter(x=>x.id!==idea.id);
+   state.weekFoodIdeas=state.weekFoodIdeas.filter(id=>id!==idea.id);
   if(ui.editDinnerId===idea.id)ui.editDinnerId=null;
   if(ui.swipedDinnerId===idea.id)ui.swipedDinnerId=null;
   if(ui.expandedDinnerId===idea.id)ui.expandedDinnerId=null;
@@ -1737,7 +1801,7 @@ document.addEventListener('submit',ev=>{
   ui.editTaskId=null;save();render();return
  }
  if(ev.target.id==='foodForm'){ev.preventDefault();const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),protein=Number(fd.get('protein')),fiber=Number(fd.get('fiber'));if(!name||!Number.isFinite(protein)||protein<0||!Number.isFinite(fiber)||fiber<0){alert('Enter a food name and valid protein/fiber amounts.');return}state.foods.push({id:uid(),date:ui.foodDate,meal:String(fd.get('meal')),name,protein,fiber});save();render();return}if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
-document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
+document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],weekFoodIdeas:Array.isArray(o.weekFoodIdeas)?o.weekFoodIdeas.filter(id=>typeof id==='string'):[],moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
 function refreshTodayDate(){
  const fresh=iso(new Date());
  if(fresh===TODAY)return;
