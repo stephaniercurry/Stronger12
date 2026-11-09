@@ -376,6 +376,15 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-day-group .task-list{display:grid;gap:9px}
 .planner-day-group .task-swipe{margin:0}
 @media(max-width:760px){.planner-new-buttons{width:100%}.planner-new-buttons .btn{flex:1}}
+
+/* One agenda under the selected day; editor appears before saved entries. */
+.planner-unified-list{display:grid;gap:9px;margin-top:13px}
+.planner-unified-list>.task-swipe,.planner-unified-list>.important-date-entry{margin:0;min-width:0}
+.planner-unified-list .task-swipe .task-content{min-width:0}
+.planner-day-empty{margin:9px 0 0}
+.planner-day-group{margin-top:20px}
+.planner-day-group h4{font-size:15px;margin:0 0 10px}
+#importantDatesDetails,#plannerTaskEditor{scroll-margin-top:14px}
 </style>
 </head>
 <body>
@@ -649,17 +658,8 @@ function plannerTaskForm(){
  '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save changes':'Save task')+'</button><button type="button" class="btn" data-task-cancel="1">Cancel</button></div></form></div>';
 }
 function tasksPage(){
- const all=state.tasks.slice().sort(taskSort),filter=ui.taskFilter;
- const visible=all.filter(t=>filter==='today'?taskOccurs(t):filter==='upcoming'?((t.repeat||'none')==='none'?!t.done&&t.due>TODAY:true):filter==='done'?taskDone(t):true);
- const doneCount=todayTasks().filter(t=>taskDone(t)).length;
- const buttons=[['today','Today'],['upcoming','Upcoming'],['all','All'],['done','Completed']];
- return header('Planner','Your tasks and events in one place. Pick a calendar day to see your plans and add something.')+
- '<div class="grid">'+importantDatesPanel()+
- '<section class="card span12" id="plannerTaskList"><div class="row spread wrap"><div><div class="kicker">TO-DO LIST</div><h2 style="margin:5px 0">All your tasks</h2>'+
- '<p class="tiny" style="margin:0">'+doneCount+' done today · '+(todayTasks().length-doneCount)+' remaining</p></div></div>'+
- '<div class="task-filters" role="group" aria-label="Filter tasks">'+buttons.map(([value,label])=>'<button type="button" class="chip '+(filter===value?'active':'')+'" data-task-filter="'+value+'" aria-pressed="'+(filter===value)+'">'+label+'</button>').join('')+'</div>'+
- '<div class="task-list">'+(visible.length?visible.map(t=>taskItem(t)).join(''):'<div class="empty">No tasks in this view.</div>')+'</div>'+
- '<p class="fineprint" style="margin-top:18px">Unfinished one-time tasks carry forward on Today. Events remain on the dates you choose. Swipe a task left or tap ··· to edit or delete it.</p></section></div>';
+ return header('Planner','Choose a date, then see or add what needs your attention. Tasks and events live together here.')+
+ '<div class="grid">'+importantDatesPanel()+'</div>';
 }
 
 const YOGA_KINDS=['Hot yoga','Yoga','Gentle / restorative','Other'];
@@ -897,7 +897,7 @@ function importantDatesPanel(){
       (items.length+plannedTasks.length>1?'<span class="important-calendar-count">'+(items.length+plannedTasks.length)+'</span>':'')+'</span>'+
     '</button>';
   }).join('')+'</div></div>';
- const rows=entries.map(e=>{
+ const eventRows=entries.map(e=>{
   const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,selected=ui.selectedImportantId===e.id;
   const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
   const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
@@ -914,6 +914,11 @@ function importantDatesPanel(){
     '<button type="button" class="btn small danger" data-important-delete="'+h(e.id)+'">Delete</button></div>':'')+
    '</div>';
  }).join('');
+ const agendaItems=[
+  ...entries.map((e,i)=>({order:e.time?'0'+e.time:'1'+String(e.title||'').toLowerCase(),html:eventRows[i]})),
+  ...dayTasks.map((t,i)=>({order:'2'+String(i).padStart(4,'0'),html:taskItem(t,false,chosen)}))
+ ].sort((a,b)=>a.order.localeCompare(b.order));
+ const agenda=agendaItems.map(x=>x.html).join('');
  const form=editing||ui.importantOpen||ui.plannerForm==='event'?
   '<div class="important-calendar-form" id="importantDatesDetails">'+
   '<h3>'+(editing?'Edit event':'Add event or birthday')+'</h3>'+
@@ -940,13 +945,10 @@ function importantDatesPanel(){
  '<p class="tiny">'+(entries.length+dayTasks.length)+' '+(entries.length+dayTasks.length===1?'item':'items')+' for this day</p></div>'+
  '<div class="planner-new-buttons"><button type="button" class="btn small primary" data-planner-add="task">+ Task</button>'+
  '<button type="button" class="btn small" data-planner-add="event">+ Event</button></div></div>'+
- '<div class="planner-day-group"><h4>Tasks ('+dayTasks.length+')</h4>'+
- (dayTasks.length?'<div class="task-list">'+dayTasks.map(t=>taskItem(t,false,chosen)).join('')+'</div>':
- '<p class="tiny">Nothing on the to-do list for this date.</p>')+'</div>'+
- '<div class="planner-day-group"><h4>Events & birthdays ('+entries.length+')</h4>'+
- (entries.length?'<div class="important-calendar-entries">'+rows+'</div>':
- '<p class="tiny">Nothing scheduled for this date.</p>')+'</div>'+
  plannerTaskForm()+form+
+ '<div class="planner-day-group" id="plannerDayAgenda"><h4>Day agenda</h4>'+
+ (agendaItems.length?'<div class="planner-unified-list">'+agenda+'</div>':
+ '<p class="tiny planner-day-empty">Nothing planned for this date. Add a task or event whenever you are ready.</p>')+'</div>'+
  '<p class="fineprint" style="margin-top:15px">Tasks carry forward if unfinished. Events stay on their chosen dates. Your saved data remains private on this device and in backups.</p>'+
  '</div></section>';
 }
@@ -1315,7 +1317,7 @@ if(b.dataset.plannerAdd){
  if(!['task','event'].includes(b.dataset.plannerAdd))return;
  ui.plannerForm=b.dataset.plannerAdd;ui.editTaskId=null;ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
  render();
- document.getElementById(ui.plannerForm==='task'?'plannerTaskEditor':'importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});
+ document.getElementById(ui.plannerForm==='task'?'plannerTaskEditor':'importantDatesDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
 if(b.dataset.importantToggle){
@@ -1460,7 +1462,7 @@ if(b.dataset.taskToggle){
  save();render();return
 }
 if(b.dataset.taskFilter){ui.taskFilter=b.dataset.taskFilter;render();return}
-if(b.dataset.taskEdit){const t=state.tasks.find(x=>x.id===b.dataset.taskEdit);if(!t)return;ui.tab='tasks';ui.editTaskId=t.id;ui.plannerForm='task';ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;if(validCalendarDate(t.due)){ui.importantDate=t.due;ui.importantMonth=t.due.slice(0,7)}render();document.getElementById('plannerTaskEditor')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return}
+if(b.dataset.taskEdit){const t=state.tasks.find(x=>x.id===b.dataset.taskEdit);if(!t)return;ui.tab='tasks';ui.editTaskId=t.id;ui.plannerForm='task';ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;if(validCalendarDate(t.due)){ui.importantDate=t.due;ui.importantMonth=t.due.slice(0,7)}render();document.getElementById('plannerTaskEditor')?.scrollIntoView?.({block:'start',behavior:'smooth'});return}
 if(b.dataset.taskCancel){ui.editTaskId=null;ui.plannerForm=null;render();return}
 if(b.dataset.taskTomorrow){const t=state.tasks.find(x=>x.id===b.dataset.taskTomorrow);if(t){t.due=addDays(TODAY,1);save();render()}return}
 if(b.dataset.taskDelete){const i=state.tasks.findIndex(x=>x.id===b.dataset.taskDelete);if(i>=0){ui.deletedTask={task:state.tasks[i],index:i};state.tasks.splice(i,1);if(ui.editTaskId===ui.deletedTask.task.id)ui.editTaskId=null;ui.swipedTaskId=null;save();render()}return}
