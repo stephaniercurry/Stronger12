@@ -913,7 +913,7 @@ function importantDatesPanel(){
     '<button type="button" class="btn small" data-important-edit="'+h(e.id)+'">Edit</button>'+
     '<button type="button" class="btn small danger" data-important-delete="'+h(e.id)+'">Delete</button></div>':'')+
    '</div>';
- }).join('');
+ });
  const agendaItems=[
   ...entries.map((e,i)=>({order:e.time?'0'+e.time:'1'+String(e.title||'').toLowerCase(),html:eventRows[i]})),
   ...dayTasks.map((t,i)=>({order:'2'+String(i).padStart(4,'0'),html:taskItem(t,false,chosen)}))
