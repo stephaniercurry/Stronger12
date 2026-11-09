@@ -1250,7 +1250,7 @@ if(mode){
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
 }const tab=b.dataset.tab;if(tab){ui.tab=tab;if(tab==='lift')ui.week=currentWeek();render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));render();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}if(b.dataset.complete){const s=ensureSession(ui.week,ui.day),any=Object.values(s.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}s.completed=true;s.completedAt=new Date().toISOString();save();render();return}if(b.dataset.reopen){ensureSession(ui.week,ui.day).completed=false;save();render();return}if(b.dataset.addPreset!==undefined){const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber});save();render();return}if(b.dataset.deleteFood){state.foods=state.foods.filter(f=>f.id!==b.dataset.deleteFood);save();render();return}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
- ui.tab='life';ui.importantPanelOpen=true;ui.importantOpen=false;ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;render();
+ ui.tab='tasks';ui.plannerForm=null;ui.editTaskId=null;ui.importantOpen=false;ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;render();
  document.getElementById('importantDatesSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
@@ -1311,6 +1311,13 @@ if(b.dataset.moneyAction){
  ui.moneyOpen=true;ui.moneySelectedId=x.id;ui.moneyEditId=null;ui.moneyNew=false;
  ui.moneyAction={type,id:x.id};ui.moneyMessage='';render();return
 }
+if(b.dataset.plannerAdd){
+ if(!['task','event'].includes(b.dataset.plannerAdd))return;
+ ui.plannerForm=b.dataset.plannerAdd;ui.editTaskId=null;ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ render();
+ document.getElementById(ui.plannerForm==='task'?'plannerTaskEditor':'importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});
+ return
+}
 if(b.dataset.importantToggle){
  ui.importantPanelOpen=!ui.importantPanelOpen;
  if(!ui.importantPanelOpen){
@@ -1328,22 +1335,22 @@ if(b.dataset.importantMonthStep){
  const day=Number((ui.importantDate||TODAY).slice(8,10));
  const maximum=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
  ui.importantMonth=target;ui.importantDate=target+'-'+String(Math.min(day,maximum)).padStart(2,'0');
- ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
  render();return
 }
 if(b.dataset.importantToday){
  ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;
- ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
  render();return
 }
 if(b.dataset.importantDay){
  const date=b.dataset.importantDay;if(!validCalendarDate(date))return;
  ui.importantDate=date;ui.importantMonth=date.slice(0,7);
- ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
  render();return
 }
 if(b.dataset.importantNew){
- ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;ui.plannerForm='event';ui.editTaskId=null;
  render();document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
 }
 if(b.dataset.importantSelect){
@@ -1364,11 +1371,11 @@ if(b.dataset.importantEdit){
   if(!state.importantEvents.some(x=>x.id===id))return;
   ui.editImportantId=id;ui.editBirthdayId=null
  }
- ui.importantOpen=true;ui.importantPanelOpen=true;ui.selectedImportantId=null;ui.tab='life';render();
+ ui.importantOpen=true;ui.importantPanelOpen=true;ui.selectedImportantId=null;ui.tab='tasks';ui.plannerForm='event';ui.editTaskId=null;render();
  document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
-if(b.dataset.importantCancel){ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;render();return}
+if(b.dataset.importantCancel){ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;render();return}
 if(b.dataset.importantDelete){
  const raw=String(b.dataset.importantDelete),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
  if(split<0)return;
@@ -1385,7 +1392,7 @@ if(b.dataset.importantDelete){
  }
  return
 }
-if(b.dataset.birthdayEdit){ui.editBirthdayId=b.dataset.birthdayEdit;ui.tab='life';render();window.scrollTo(0,0);return}
+if(b.dataset.birthdayEdit){ui.editBirthdayId=b.dataset.birthdayEdit;ui.tab='tasks';ui.plannerForm='event';render();window.scrollTo(0,0);return}
 if(b.dataset.birthdayCancel){ui.editBirthdayId=null;render();return}
 if(b.dataset.birthdayDelete){const i=state.birthdays.findIndex(x=>x.id===b.dataset.birthdayDelete);if(i>=0&&confirm('Remove '+state.birthdays[i].name+' from birthdays?')){state.birthdays.splice(i,1);if(ui.editBirthdayId===b.dataset.birthdayDelete)ui.editBirthdayId=null;save();render()}return}
 if(b.dataset.yogaEdit){ui.editYogaId=b.dataset.yogaEdit;ui.tab='lift';render();window.scrollTo(0,0);return}
@@ -1447,13 +1454,14 @@ if(b.dataset.taskUndo){if(ui.deletedTask){const d=ui.deletedTask;state.tasks.spl
 if(b.dataset.taskDismiss){ui.deletedTask=null;render();return}
 if(b.dataset.taskToggle){
  const t=state.tasks.find(x=>x.id===b.dataset.taskToggle);if(!t)return;
+ const targetDate=validCalendarDate(b.dataset.taskDate)?b.dataset.taskDate:TODAY;
  if((t.repeat||'none')==='none'){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null}
- else{const a=Array.isArray(t.completedDates)?t.completedDates:[];t.completedDates=a.includes(TODAY)?a.filter(d=>d!==TODAY):[...a,TODAY]}
+ else{const a=Array.isArray(t.completedDates)?t.completedDates:[];t.completedDates=a.includes(targetDate)?a.filter(d=>d!==targetDate):[...a,targetDate]}
  save();render();return
 }
 if(b.dataset.taskFilter){ui.taskFilter=b.dataset.taskFilter;render();return}
-if(b.dataset.taskEdit){ui.tab='tasks';ui.editTaskId=b.dataset.taskEdit;render();window.scrollTo(0,0);return}
-if(b.dataset.taskCancel){ui.editTaskId=null;render();return}
+if(b.dataset.taskEdit){const t=state.tasks.find(x=>x.id===b.dataset.taskEdit);if(!t)return;ui.tab='tasks';ui.editTaskId=t.id;ui.plannerForm='task';ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;if(validCalendarDate(t.due)){ui.importantDate=t.due;ui.importantMonth=t.due.slice(0,7)}render();document.getElementById('plannerTaskEditor')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return}
+if(b.dataset.taskCancel){ui.editTaskId=null;ui.plannerForm=null;render();return}
 if(b.dataset.taskTomorrow){const t=state.tasks.find(x=>x.id===b.dataset.taskTomorrow);if(t){t.due=addDays(TODAY,1);save();render()}return}
 if(b.dataset.taskDelete){const i=state.tasks.findIndex(x=>x.id===b.dataset.taskDelete);if(i>=0){ui.deletedTask={task:state.tasks[i],index:i};state.tasks.splice(i,1);if(ui.editTaskId===ui.deletedTask.task.id)ui.editTaskId=null;ui.swipedTaskId=null;save();render()}return}
 if(b.dataset.print){window.print();return}});
@@ -1632,7 +1640,7 @@ document.addEventListener('submit',ev=>{
     ui.importantDate=birthdayDate({month:Number(date.slice(5,7)),day:Number(date.slice(8,10))},visibleYear);
    }else ui.importantDate=date;
    ui.importantMonth=ui.importantDate.slice(0,7);
-   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;save();render();return
+   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;save();render();return
  }
  if(ev.target.id==='cycleForm'){
   ev.preventDefault();
@@ -1688,6 +1696,7 @@ document.addEventListener('submit',ev=>{
    if(existing.repeat!==repeat||existing.due!==due||Number(existing.repeatDays||0)!==Number(repeatDays||0)){if((existing.repeat||'none')!=='none'&&Array.isArray(existing.completedDates)){existing.completedDates=[]}}
    Object.assign(existing,patch);
   }else state.tasks.push({id:uid(),...patch,createdAt:new Date().toISOString(),done:false,doneAt:null,completedDates:[]});
+  if(!quick){ui.importantDate=due;ui.importantMonth=due.slice(0,7);ui.plannerForm=null}
   ui.editTaskId=null;save();render();return
  }
  if(ev.target.id==='foodForm'){ev.preventDefault();const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),protein=Number(fd.get('protein')),fiber=Number(fd.get('fiber'));if(!name||!Number.isFinite(protein)||protein<0||!Number.isFinite(fiber)||fiber<0){alert('Enter a food name and valid protein/fiber amounts.');return}state.foods.push({id:uid(),date:ui.foodDate,meal:String(fd.get('meal')),name,protein,fiber});save();render();return}if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
