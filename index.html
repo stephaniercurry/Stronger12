@@ -1235,10 +1235,10 @@ function moneyTodayCard(){
 function dashboard(){const t=dailyTotals(TODAY);return header('One day at a time.','Your tasks, important dates, meals and shopping—without the extra screens.')+`<div class="grid today-grid">
  ${taskSummary()}
  ${agendaTodayCard()}
- ${groceryTodayCard()}
  ${weekFoodTodayCard()}
  <section class="card dark span7"><h2 style="font-size:22px;margin:0 0 16px">Weekly rhythm</h2>${weeklyCalendar()}<div class="buttonrow" style="margin-top:18px"><button class="btn solidlight" data-tab="lift">Open this week's workouts →</button></div></section>
  <section class="card span5"><div class="row spread"><div class="kicker">Today's nutrition</div><span class="tiny">${formatDate(TODAY)}</span></div><div style="margin-top:15px"><div class="daily-row"><span>Protein</span><strong>${fmt(t.protein,1)} <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}<div class="daily-row"><span>Fiber</span><strong>${fmt(t.fiber,1)} <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div><button class="btn small" data-tab="food">Log food →</button></section>
+ ${groceryTodayCard()}
  ${moneyTodayCard()}
  </div>`}
 
