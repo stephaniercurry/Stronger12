@@ -261,6 +261,47 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .important-date-actions .btn{min-height:41px;min-width:78px}
 @media(max-width:760px){.important-date-trigger{padding:12px}.important-date-actions{padding:0 12px 13px 51px}}
 
+
+
+/* Small, optional digital envelope wallet. Collapsed by default on Life. */
+.money-panel-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;background:transparent;border:0;text-align:left;padding:0;color:var(--ink);min-height:62px}
+.money-panel-toggle>span:first-child{display:grid;gap:5px}
+.money-panel-title{font-size:21px;font-weight:850;letter-spacing:-.4px}
+.money-panel-arrow{font-size:25px;color:var(--green);font-weight:800}
+.money-body{border-top:1px solid var(--line);padding-top:17px;margin-top:14px}
+.money-message{margin-bottom:12px}
+.money-total{display:flex;justify-content:space-between;align-items:center;background:#eaf5f5;border-radius:14px;padding:13px 15px;gap:12px;margin-bottom:12px;color:#245f68;font-weight:700}
+.money-total strong{font-size:23px;letter-spacing:-.7px}
+.money-setup{padding:15px;margin-top:13px;background:#faf7fb;border:1px solid #e8e2ef;border-radius:16px}
+.money-setup h3,.money-inline-form h3{margin:0;font-size:15px}
+.money-setup input,.money-setup select,.money-inline-form input,.money-inline-form select{font-size:16px}
+.money-group{margin-top:23px}
+.money-group h3{font-size:16px;margin:0}
+.money-group .tiny{margin:5px 0 11px}
+.money-envelope-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.money-envelope{background:#fffafc;border:1px solid #f0dee8;border-radius:16px;overflow:hidden;min-width:0}
+.money-envelope.is-selected{border-color:#b3d6db}
+.money-envelope-face{display:grid;gap:4px;min-height:146px;width:100%;padding:14px;text-align:left;border:0;background:transparent;color:var(--ink);justify-items:start}
+.money-envelope-symbol{font-size:24px;line-height:1}
+.money-envelope-name{font-size:13px;font-weight:800;overflow-wrap:anywhere}
+.money-envelope-amount{font-size:24px;letter-spacing:-.8px;line-height:1.2}
+.money-envelope-caption{font-size:11px;color:var(--muted)}
+.money-goal-meter{width:100%;height:7px;border-radius:99px;overflow:hidden;background:#ecedf1;margin-top:3px}
+.money-goal-meter>span{display:block;height:100%;background:#7cbfbc;border-radius:99px}
+.money-envelope-controls{padding:12px;border-top:1px solid #eee4ec;background:#fff}
+.money-envelope-controls .buttonrow{gap:6px}
+.money-envelope-controls .btn.small{padding:8px 10px}
+.money-inline-form{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.money-placeholder{font-size:12px;padding:11px;border:1px dashed #e0e5ed;border-radius:13px;background:#fafafd;margin:7px 0 0}
+.money-history{margin-top:20px;padding:12px;border-radius:13px;border:1px solid #e4e8ef}
+.money-history>summary{font-size:13px}
+.money-history-row{padding:11px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:12px}
+.money-history-row:last-child{border-bottom:0}
+.money-history-row>span{display:grid;gap:3px}
+.money-history-row strong{white-space:nowrap}
+.money-footnote{margin:18px 0 0}
+@media(max-width:760px){.money-envelope-grid{gap:8px}.money-envelope-face{padding:12px;min-height:145px}.money-envelope-amount{font-size:22px}.money-panel-title{font-size:20px}}
+
 </style>
 </head>
 <body>
@@ -289,9 +330,9 @@ function formatDate(s,opts){return dateOf(s).toLocaleDateString(undefined,opts||
 function h(v){return String(v===undefined||v===null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(n,dp=0){return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:dp})}
 const defaultSettings={startDate:nextMonday(),proteinGoal:130,fiberGoal:30,weightUnit:'lb',upperIncrement:2.5,lowerIncrement:5};
-let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
+let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],moneyEnvelopes:[],moneyHistory:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
 let storageFailed=false;
-try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
+try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],moneyEnvelopes:Array.isArray(obj.moneyEnvelopes)?obj.moneyEnvelopes:[],moneyHistory:Array.isArray(obj.moneyHistory)?obj.moneyHistory:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
 const PROGRAM_OPTIONS={
  foundation:{label:'Foundations',description:'The original full-body, upper-body and lower-body program, with simple progression and recovery weeks.'},
  builder:{label:'Strength Builder',description:'A new 12-week block with more upper/lower strength emphasis using familiar home or gym exercises.'},
@@ -396,7 +437,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','☑','Tasks'],['lift','▣','Workout'],['food','◕','Food'],['progress','▥','Progress'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -865,9 +906,93 @@ function dinnerIdeasPanel(){
  '</section>';
 }
 
+
+/* Virtual envelopes. No banking connection; every deposit is manually assigned money.
+   Amounts use integer cents so transactions never accumulate decimal rounding errors. */
+function moneyAmount(value){
+ const s=String(value??'').trim();
+ if(!/^\d{1,10}(?:\.\d{1,2})?$/.test(s))return null;
+ const [whole,part='']=s.split('.');
+ const cents=Number(whole)*100+Number(part.padEnd(2,'0'));
+ return Number.isSafeInteger(cents)&&cents>0?cents:null;
+}
+function moneyBalance(env){return Number.isSafeInteger(env?.amountCents)&&env.amountCents>=0?env.amountCents:0}
+function moneyText(cents){return (Number(cents||0)/100).toLocaleString('en-US',{style:'currency',currency:'USD'})}
+function moneyGoal(env){
+ return Number.isSafeInteger(env?.goalCents)&&env.goalCents>0?env.goalCents:0;
+}
+function moneyEnvelopesPanel(){
+ const envelopes=state.moneyEnvelopes;
+ const total=envelopes.reduce((sum,x)=>sum+moneyBalance(x),0);
+ const edit=envelopes.find(x=>x.id===ui.moneyEditId),open=ui.moneyOpen;
+ const creating=ui.moneyNew||!!edit;
+ const action=ui.moneyAction,active=envelopes.find(x=>x.id===action?.id);
+ const lastHistory=state.moneyHistory.slice(-6).reverse();
+ const makeCard=(x)=>{
+  const selected=ui.moneySelectedId===x.id,kind=x.kind==='save'?'save':'spend',goal=moneyGoal(x),balance=moneyBalance(x);
+  const others=envelopes.filter(e=>e.id!==x.id);
+  return '<div class="money-envelope'+(selected?' is-selected':'')+'">'+
+   '<button type="button" class="money-envelope-face" data-money-select="'+h(x.id)+'" aria-expanded="'+selected+'" aria-label="'+h(x.name)+', '+moneyText(balance)+' available, tap for actions">'+
+   '<span class="money-envelope-symbol" aria-hidden="true">'+(kind==='save'?'🏦':'✦')+'</span>'+
+   '<span class="money-envelope-name">'+h(x.name)+'</span>'+
+   '<strong class="money-envelope-amount">'+moneyText(balance)+'</strong>'+
+   '<span class="money-envelope-caption">'+(kind==='save'?(goal?'of '+moneyText(goal)+' goal':'Building up'):'Available to spend')+'</span>'+
+   (goal&&kind==='save'?'<span class="money-goal-meter"><span style="width:'+Math.min(100,100*balance/goal)+'%"></span></span>':'')+
+   '</button>'+
+   (selected?'<div class="money-envelope-controls">'+
+    '<div class="buttonrow"><button type="button" class="btn small" data-money-action="add" data-money-id="'+h(x.id)+'">+ Add money</button>'+
+    '<button type="button" class="btn small" data-money-action="spend" data-money-id="'+h(x.id)+'" '+(balance<=0?'disabled':'')+'>Spend</button>'+
+    '<button type="button" class="btn small" data-money-action="move" data-money-id="'+h(x.id)+'" '+(balance<=0||!others.length?'disabled':'')+'>Move</button>'+
+    '<button type="button" class="btn small" data-money-edit="'+h(x.id)+'">Edit</button></div>'+
+    (action?.id===x.id&&['add','spend','move'].includes(action.type)?
+     '<form id="moneyActionForm" class="money-inline-form stack">'+
+     '<h3>'+({add:'Assign money to ',spend:'Record spending from ',move:'Move money from '}[action.type])+h(x.name)+'</h3>'+
+     '<div class="field"><label for="moneyAmount">Amount ($)</label><input type="number" id="moneyAmount" name="amount" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" required></div>'+
+     (action.type==='move'?'<div class="field"><label for="moneyTarget">Move to</label><select name="toId" id="moneyTarget" required>'+others.map(other=>'<option value="'+h(other.id)+'">'+h(other.name)+'</option>').join('')+'</select></div>':'')+
+     '<div class="field"><label for="moneyNote">Note (optional)</label><input id="moneyNote" name="note" maxlength="140" placeholder="What was it for?"></div>'+
+     '<div class="buttonrow"><button class="btn primary" type="submit">'+({add:'Assign money',spend:'Record spending',move:'Move money'}[action.type])+'</button>'+
+     '<button class="btn" type="button" data-money-action-cancel="1">Cancel</button></div></form>':'')+
+    '</div>':'')+'</div>';
+ };
+ const group=(kind,label,description)=>{
+  const items=envelopes.filter(x=>(x.kind==='save'?'save':'spend')===kind);
+  return '<div class="money-group"><div class="row spread"><h3>'+label+'</h3><span class="tiny">'+items.length+' '+(items.length===1?'envelope':'envelopes')+'</span></div>'+
+    '<p class="tiny">'+description+'</p>'+
+    (items.length?'<div class="money-envelope-grid">'+items.map(makeCard).join('')+'</div>':'<p class="money-placeholder">'+(kind==='spend'?'Fun money, dining out, clothing…':'Christmas, travel, car repairs…')+'</p>')+'</div>';
+ };
+ return '<section class="card span12" id="moneySection">'+
+  '<button type="button" class="money-panel-toggle" data-money-toggle="1" aria-expanded="'+open+'"><span>'+
+  '<span class="kicker">AN OPTIONAL LITTLE MONEY SYSTEM</span><span class="money-panel-title">Money envelopes</span>'+
+  '<span class="tiny">'+envelopes.length+' saved · '+moneyText(total)+' assigned</span></span>'+
+  '<span class="money-panel-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></button>'+
+  (open?'<div class="money-body">'+
+   '<p class="fineprint">Give money you already have a purpose. These are virtual envelopes, not bank accounts. Check that your assigned total still matches money available in your real accounts.</p>'+
+   (ui.moneyMessage?'<div class="notice money-message" role="status">'+h(ui.moneyMessage)+'</div>':'')+
+   '<div class="money-total"><span>Total assigned</span><strong>'+moneyText(total)+'</strong></div>'+
+   '<div class="buttonrow"><button type="button" class="btn small primary" data-money-new="1">'+(creating?'Close envelope form':'+ New envelope')+'</button></div>'+
+   (creating?'<form id="moneyEnvelopeForm" class="money-setup stack">'+
+    '<h3>'+(edit?'Edit envelope':'New envelope')+'</h3>'+
+    '<div class="field"><label for="moneyName">Envelope name</label><input type="text" name="name" id="moneyName" maxlength="64" placeholder="Dining out, Christmas…" value="'+h(edit?.name||'')+'" required></div>'+
+    '<div class="field"><label for="moneyKind">Purpose</label><select id="moneyKind" name="kind"><option value="spend" '+((edit?.kind||'spend')==='spend'?'selected':'')+'>Ready to enjoy</option><option value="save" '+(edit?.kind==='save'?'selected':'')+'>Building up</option></select></div>'+
+    '<div class="field"><label for="moneyGoal">Goal ($, optional)</label><input id="moneyGoal" type="number" name="goal" step="0.01" min="0" placeholder="No goal required" value="'+(moneyGoal(edit)?(moneyGoal(edit)/100).toFixed(2):'')+'"></div>'+
+    '<div class="buttonrow"><button class="btn primary" type="submit">'+(edit?'Save envelope':'Create envelope')+'</button>'+
+    '<button type="button" class="btn" data-money-new="1">Cancel</button>'+
+    (edit?'<button type="button" class="btn danger" data-money-delete="'+h(edit.id)+'" '+(moneyBalance(edit)>0?'disabled title="Move or spend the balance before deleting"':'')+'>Delete envelope</button>':'')+'</div></form>':'')+
+   group('spend','Ready to enjoy','Money set aside for spending you can feel good about.')+
+   group('save','Building up','Money saved toward something you want or expect to pay for.')+
+   (lastHistory.length?'<details class="money-history"><summary>Recent activity</summary>'+
+    '<div class="money-history-rows">'+lastHistory.map(tx=>{
+     const description=tx.type==='add'?'Assigned to '+tx.toName:tx.type==='spend'?'Spent from '+tx.fromName:'Moved '+tx.fromName+' → '+tx.toName;
+     const date=tx.at?new Date(tx.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+     return '<div class="money-history-row"><span>'+h(description)+(tx.note?' · '+h(tx.note):'')+'<span class="tiny">'+h(date)+'</span></span><strong>'+moneyText(tx.amountCents)+'</strong></div>';
+    }).join('')+'</div></details>':'')+
+   '<p class="fineprint money-footnote">Nothing is transferred at your bank. Add only dollars you actually have and record purchases here so balances stay accurate. All entries stay on this device and are included in your backup.</p>'+
+   '</div>':'')+'</section>';
+}
+
 function lifePage(){
  const open=groceryNeeds(),done=state.groceries.filter(x=>x.checked),edit=state.groceries.find(x=>x.id===ui.editGroceryId),entries=open.concat(done);
- return header('Life, in one place.','Your groceries, recipe book and important dates—without the extra clutter.')+
+ return header('Life, in one place.','Your groceries, recipes, important dates and money—without the extra clutter.')+
  '<div class="grid"><section class="card span12"><div class="row spread wrap"><div><div class="kicker">GROCERY LIST</div><h2 style="margin:5px 0">What do we need?</h2><p class="tiny" style="margin:0">'+open.length+' to buy · '+done.length+' in the cart</p></div><div class="buttonrow"><button class="btn small" data-grocery-share="1">↗ Share list</button><button class="btn small" data-grocery-copy="1">Copy</button></div></div>'+
  '<form id="groceryForm" class="stack" style="margin:16px 0"><div class="field"><label for="groceryName">Item</label><input id="groceryName" name="name" maxlength="110" required placeholder="Milk, spinach, protein powder…" value="'+h(edit?.name||'')+'"></div>'+
  '<div class="inlinefields"><div class="field"><label for="groceryQuantity">Quantity / size (optional)</label><input id="groceryQuantity" name="quantity" maxlength="60" placeholder="2 cartons, 1 lb…" value="'+h(edit?.quantity||'')+'"></div>'+
@@ -876,7 +1001,7 @@ function lifePage(){
  '<div class="grocery-rows">'+(entries.length?entries.map(x=>'<div class="grocery-row'+(x.checked?' is-bought':'')+'"><button type="button" class="grocery-check" data-grocery-check="'+h(x.id)+'" aria-label="'+h((x.checked?'Mark not bought: ':'Mark bought: ')+x.name)+'" aria-pressed="'+!!x.checked+'">'+(x.checked?'✓':'')+'</button><div class="grocery-name"><strong>'+h(x.name)+'</strong><div class="tiny">'+h(x.quantity||'')+(x.quantity?' · ':'')+h(x.category||'Other')+'</div></div><button class="btn small" data-grocery-edit="'+h(x.id)+'">Edit</button><button class="btn small danger" data-grocery-delete="'+h(x.id)+'" aria-label="Remove '+h(x.name)+'">×</button></div>').join(''):'<div class="empty">Your list is empty. Add an item to begin.</div>')+'</div>'+
  (done.length?'<button class="btn small" data-grocery-clear="1" style="margin-top:15px">Clear '+done.length+' purchased '+(done.length===1?'item':'items')+'</button>':'')+
  '<div class="notice" style="margin-top:17px"><strong>Sharing:</strong> Share list sends the current unpurchased items through your iPhone Share menu. Your son receives a copy, not a live synchronized list. Groceries stay private on your phone unless you choose to send them.</div></section>'+
- dinnerIdeasPanel()+importantDatesPanel()+'</div>';
+ dinnerIdeasPanel()+importantDatesPanel()+moneyEnvelopesPanel()+'</div>';
 }
 function yogaProgressCard(){
  return '<section class="card span4"><div class="kicker">Yoga sessions logged</div><div class="metric">'+state.yogaSessions.length+'</div><p class="tiny">'+yogaThisWeek().length+' this week · on whatever days worked for you.</p></section>';
@@ -956,7 +1081,7 @@ ${yogaProgressCard()}
 <section class="card span4"><h2>Optional body measurements</h2><p class="tiny">Only if you want them. Strength and consistency matter even when scale weight is unchanged.</p><form id="checkinForm" class="stack"><div class="field"><label>Date</label><input type="date" name="date" value="${TODAY}" required></div><div class="inlinefields"><div class="field"><label>Body weight (${h(state.settings.weightUnit)})</label><input type="number" name="weight" min="0" step="0.1" placeholder="Optional"></div><div class="field"><label>Waist (inches)</label><input type="number" name="waist" min="0" step="0.1" placeholder="Optional"></div></div><button class="btn" type="submit">Save check-in</button></form>${state.checkins.length?`<div class="list-mini" style="margin-top:12px">${state.checkins.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4).map(c=>`<div><small>${formatDate(c.date)}</small><small>${c.weight?h(c.weight)+' '+h(state.settings.weightUnit):''}${c.weight&&c.waist?' · ':''}${c.waist?h(c.waist)+' in':''}</small></div>`).join('')}</div>`:''}</section>
 </div>`}
 function settings(){return header('Make it yours.','Adjust your goals and program start date. Your data is stored locally on this device and browser.')+`<div class="grid"><section class="card span7"><h2>Program & targets</h2>${[['startDate','Selected cycle begins (Monday)','date'],['proteinGoal','Daily protein goal (g)','number'],['fiberGoal','Daily fiber goal (g)','number'],['upperIncrement','Upper-body load increment','number'],['lowerIncrement','Lower-body load increment','number']].map(([k,label,type])=>`<div class="setting-row"><label for="setting-${k}"><strong>${label}</strong></label><input id="setting-${k}" data-setting="${k}" type="${type}" ${type==='number'?'min="0.1" step="0.5"':''} value="${h(k==='startDate'?activeCycle().startDate:state.settings[k])}"></div>`).join('')}<div class="setting-row"><label for="setting-weightUnit"><strong>Load unit</strong></label><select id="setting-weightUnit" data-setting="weightUnit"><option value="lb" ${state.settings.weightUnit==='lb'?'selected':''}>Pounds (lb)</option><option value="kg" ${state.settings.weightUnit==='kg'?'selected':''}>Kilograms (kg)</option></select></div><p class="tiny">Changing load units does not convert old weights. The selected cycle starts on Monday; adjusting its date changes the plan calendar, not dates on workouts you already logged.</p></section>
-<section class="card span5"><h2>Own your data</h2><p class="fineprint">Your workouts, yoga, groceries, dinner ideas, birthdays, important dates, tasks, and food entries remain in this browser's local storage. There is no account, server, tracker, or subscription. Your entries save automatically on this device after each change. Your information does not automatically sync between devices. Use Save backup to Files / iCloud periodically to preserve a restorable copy.</p><div class="stack"><button class="btn primary" data-share-backup="1">↗ Save backup to Files / iCloud</button><button class="btn" data-export="json">↓ Download backup (.json)</button><button class="btn" data-import="1">↑ Restore backup (.json)</button><button class="btn" data-export="csv">↓ Export workout + food CSV</button><button class="btn" data-print="1">Print current screen</button></div><div class="notice" style="margin-top:17px">${storageFailed?'⚠ Storage unavailable — entries may not persist.':'✓ Auto-save is enabled on this device.'}<br><small>Last backup: ${getLastBackup()?formatDate(getLastBackup(),{year:'numeric',month:'short',day:'numeric'}):'none yet'}. Back up every week.</small></div><div class="notice warn" style="margin-top:12px">Important: these records live in the Home Screen app on this phone. They may be lost if you delete the web app or clear its data. Back up to iCloud Drive or Files weekly and before changing devices.</div><div class="divider"></div><h3>WHOOP watch</h3><p class="tiny">Automatic WHOOP syncing is not connected. It would require separate WHOOP authorization and a secure integration service. Your workout and nutrition logs work without WHOOP or any sign-in.</p><h3>App versions</h3><p class="tiny">Stronger / 12 · Version 2.8 — Tap important dates to Edit or Delete. You can keep using the same backup format as features are added.</p></section>
+<section class="card span5"><h2>Own your data</h2><p class="fineprint">Your workouts, yoga, groceries, recipes, money envelopes, birthdays, important dates, tasks, and food entries remain in this browser's local storage. There is no account, server, tracker, or subscription. Your entries save automatically on this device after each change. Your information does not automatically sync between devices. Use Save backup to Files / iCloud periodically to preserve a restorable copy.</p><div class="stack"><button class="btn primary" data-share-backup="1">↗ Save backup to Files / iCloud</button><button class="btn" data-export="json">↓ Download backup (.json)</button><button class="btn" data-import="1">↑ Restore backup (.json)</button><button class="btn" data-export="csv">↓ Export workout + food CSV</button><button class="btn" data-print="1">Print current screen</button></div><div class="notice" style="margin-top:17px">${storageFailed?'⚠ Storage unavailable — entries may not persist.':'✓ Auto-save is enabled on this device.'}<br><small>Last backup: ${getLastBackup()?formatDate(getLastBackup(),{year:'numeric',month:'short',day:'numeric'}):'none yet'}. Back up every week.</small></div><div class="notice warn" style="margin-top:12px">Important: these records live in the Home Screen app on this phone. They may be lost if you delete the web app or clear its data. Back up to iCloud Drive or Files weekly and before changing devices.</div><div class="divider"></div><h3>WHOOP watch</h3><p class="tiny">Automatic WHOOP syncing is not connected. It would require separate WHOOP authorization and a secure integration service. Your workout and nutrition logs work without WHOOP or any sign-in.</p><h3>App versions</h3><p class="tiny">Stronger / 12 · Version 2.9 — Simple money envelopes. You can keep using the same backup format as features are added.</p></section>
 <section class="card span12"><h2>Training notes & safety</h2><p class="fineprint">This is a general strength-training template, not medical clearance or an individualized rehabilitation plan. Each session can be Home or Gym; both use three sets per exercise. The starting plan uses dumbbells, stable furniture, and rings; it assumes those are available and can be modified to fit your equipment. Begin with loads that allow controlled movement. On painful back days, stop or modify the aggravating exercise. New or progressive weakness, numbness around the groin, or changes in bladder/bowel control warrant urgent medical evaluation. Program progression uses rep ranges and effort; it is not a requirement to increase weight every week.</p><p class="tiny">Protein/fiber values in quick add are approximate. RIR means “repetitions in reserve”: how many more clean reps you believe you could have performed.</p></section></div>`}
 function renderNav(){const code=NAV.map(([id,icon,label])=>`<button data-tab="${id}" class="${ui.tab===id?'active':''}" aria-current="${ui.tab===id?'page':'false'}"><span class="sym">${icon}</span>${label}</button>`).join('');document.getElementById('desktopNav').innerHTML=code;document.getElementById('mobileNav').innerHTML=code}
 function render(){renderNav();document.getElementById('appView').innerHTML=taskUndoBanner()+({home:dashboard,tasks:tasksPage,lift,food,progress,life:lifePage,settings}[ui.tab]||dashboard)();const tag=document.getElementById('savedStatus');if(tag)tag.textContent=storageFailed?'⚠ This browser could not save data':state.lastSavedAt?'✓ Last saved on this device '+new Date(state.lastSavedAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Ready to save locally';}
@@ -1282,7 +1407,7 @@ document.addEventListener('submit',ev=>{
   ui.editTaskId=null;save();render();return
  }
  if(ev.target.id==='foodForm'){ev.preventDefault();const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),protein=Number(fd.get('protein')),fiber=Number(fd.get('fiber'));if(!name||!Number.isFinite(protein)||protein<0||!Number.isFinite(fiber)||fiber<0){alert('Enter a food name and valid protein/fiber amounts.');return}state.foods.push({id:uid(),date:ui.foodDate,meal:String(fd.get('meal')),name,protein,fiber});save();render();return}if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
-document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
+document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
 function refreshTodayDate(){
  const fresh=iso(new Date());
  if(fresh===TODAY)return;
