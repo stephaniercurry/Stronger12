@@ -385,6 +385,19 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-day-group{margin-top:20px}
 .planner-day-group h4{font-size:15px;margin:0 0 10px}
 #importantDatesDetails,#plannerTaskEditor{scroll-margin-top:14px}
+
+/* Events match task swipe/ellipsis behavior while keeping their tinted appearance. */
+.event-swipe.task-swipe{border:1px solid #deebee;border-radius:16px;background:#f0e9ee}
+.event-swipe .event-row{display:flex;align-items:center;gap:12px;min-height:65px;padding:12px 11px 12px 14px;background:#f6fafb;position:relative;z-index:1;transition:transform .18s ease;will-change:transform;min-width:0}
+.event-swipe.is-revealed .event-row{transform:translateX(-174px)}
+.event-swipe .important-date-emoji{flex:0 0 29px}
+.event-swipe .important-date-copy{flex:1;min-width:0}
+.event-swipe .important-date-copy strong{font-size:15px}
+.event-swipe .important-date-copy .tiny{overflow-wrap:anywhere}
+.event-swipe .event-inline-note{color:var(--muted);white-space:pre-line;overflow-wrap:anywhere}
+.event-swipe .task-edit-reveal{background:#467e86}
+.event-swipe .task-more{color:#6e9196}
+@media(prefers-reduced-motion:reduce){.event-swipe .event-row{transition:none}}
 </style>
 </head>
 <body>
@@ -898,21 +911,21 @@ function importantDatesPanel(){
     '</button>';
   }).join('')+'</div></div>';
  const eventRows=entries.map(e=>{
-  const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,selected=ui.selectedImportantId===e.id;
+  const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,revealed=ui.selectedImportantId===e.id;
   const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
   const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
   const time=e.time?' · '+e.time:'';
   const summary=itemType.label+time+age+span;
-  return '<div class="important-date-entry'+(selected?' selected':'')+'">'+
-   '<button type="button" class="important-date-trigger" data-important-select="'+h(e.id)+'" aria-expanded="'+selected+'" aria-label="'+h(e.title)+'. '+h(summary)+'. Tap for options">'+
-    '<span class="important-date-emoji" aria-hidden="true">'+itemType.emoji+'</span>'+
-    '<span class="important-date-copy"><strong>'+h(e.title)+'</strong><span class="tiny">'+h(summary)+'</span></span>'+
-    '<span class="important-date-chevron" aria-hidden="true">'+(selected?'⌃':'⌄')+'</span></button>'+
-   (selected?(e.notes?'<div class="tiny important-calendar-entry-note">'+h(e.notes)+'</div>':'')+
-    '<div class="important-date-actions" role="group" aria-label="Actions for '+h(e.title)+'">'+
-    '<button type="button" class="btn small" data-important-edit="'+h(e.id)+'">Edit</button>'+
-    '<button type="button" class="btn small danger" data-important-delete="'+h(e.id)+'">Delete</button></div>':'')+
-   '</div>';
+  return '<div class="task-swipe event-swipe'+(revealed?' is-revealed':'')+'" data-event-swipe="'+h(e.id)+'">'+
+   '<div class="task-swipe-actions">'+
+   '<button type="button" class="task-edit-reveal" data-important-edit="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(e.title)+'">Edit</button>'+
+   '<button type="button" class="task-delete-reveal" data-important-delete="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Delete '+h(e.title)+'">Delete</button></div>'+
+   '<div class="event-row">'+
+   '<span class="important-date-emoji" aria-hidden="true">'+itemType.emoji+'</span>'+
+   '<div class="important-date-copy"><strong>'+h(e.title)+'</strong><span class="tiny">'+h(summary)+'</span>'+
+   (e.notes?'<span class="tiny event-inline-note">'+h(e.notes)+'</span>':'')+'</div>'+
+   '<button type="button" class="task-more" data-important-reveal="'+h(e.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(e.title)+'" title="Swipe left or tap to show Edit and Delete">···</button>'+
+   '</div></div>';
  });
  const agendaItems=[
   ...entries.map((e,i)=>({order:e.time?'0'+e.time:'1'+String(e.title||'').toLowerCase(),html:eventRows[i]})),
@@ -1355,12 +1368,12 @@ if(b.dataset.importantNew){
  ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;ui.plannerForm='event';ui.editTaskId=null;
  render();document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
 }
-if(b.dataset.importantSelect){
- const raw=String(b.dataset.importantSelect),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
+if(b.dataset.importantReveal){
+ const raw=String(b.dataset.importantReveal),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
  if(split<0)return;
  if(kind==='birthday'&&!state.birthdays.some(x=>x.id===id))return;
  if(kind!=='birthday'&&!state.importantEvents.some(x=>x.id===id))return;
- ui.selectedImportantId=ui.selectedImportantId===raw?null:raw;
+ ui.selectedImportantId=ui.selectedImportantId===raw?null:raw;ui.swipedTaskId=null;
  render();return
 }
 if(b.dataset.importantEdit){
@@ -1471,10 +1484,11 @@ let rowTouchStart=null;
 document.addEventListener('touchstart',ev=>{
  const target=ev.target;
  const dinner=target.closest?.('[data-dinner-swipe]');
- const task=dinner?null:target.closest?.('[data-task-swipe]');
- if((!dinner&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
- const t=ev.touches[0];
- rowTouchStart={kind:dinner?'dinner':'task',id:(dinner||task).dataset[dinner?'dinnerSwipe':'taskSwipe'],x:t.clientX,y:t.clientY};
+ const event=dinner?null:target.closest?.('[data-event-swipe]');
+ const task=dinner||event?null:target.closest?.('[data-task-swipe]');
+ if((!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
+ const t=ev.touches[0],kind=dinner?'dinner':event?'event':'task',row=dinner||event||task;
+ rowTouchStart={kind,id:row.dataset[kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe'],x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener('touchcancel',()=>{rowTouchStart=null},{passive:true});
 document.addEventListener('touchend',ev=>{
@@ -1482,8 +1496,9 @@ document.addEventListener('touchend',ev=>{
  if(!start||ev.changedTouches.length!==1)return;
  const t=ev.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.25)return;
- if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null}
- else{ui.swipedTaskId=dx<0?start.id:null;ui.swipedDinnerId=null}
+ if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null}
+ else if(start.kind==='event'){ui.selectedImportantId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null}
+ else{ui.swipedTaskId=dx<0?start.id:null;ui.swipedDinnerId=null;ui.selectedImportantId=null}
  if(ev.cancelable)ev.preventDefault();
  render();
 },{passive:false});
