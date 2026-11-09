@@ -326,6 +326,43 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .important-panel-toggle:focus-visible{outline:3px solid #76b6bc;outline-offset:5px;border-radius:8px}
 .important-panel-body{border-top:1px solid var(--line);padding-top:17px;margin-top:14px}
 @media(max-width:760px){.important-panel-title{font-size:20px}}
+
+/* Monthly Important Dates calendar and day-specific activity list. */
+.important-calendar{margin-top:16px}
+.important-calendar-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+.important-calendar-month{font-size:20px;font-weight:850;letter-spacing:-.4px;margin:0}
+.important-calendar-controls{display:flex;gap:6px;align-items:center}
+.important-calendar-controls .btn{min-width:42px;min-height:42px;padding:8px 10px}
+.important-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.important-calendar-weekday{font-size:11px;text-transform:uppercase;text-align:center;color:var(--muted);font-weight:800;padding:4px 0 9px}
+.important-calendar-day{min-width:0;min-height:65px;display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:flex-start;padding:9px 3px 6px;background:#f8fafb;border:1px solid #e2eaf0;border-radius:12px;color:var(--ink);font-weight:750}
+.important-calendar-day.outside{background:#fafbfc;color:#a4acb6}
+.important-calendar-day.is-today{border-color:#72b6bc;box-shadow:inset 0 0 0 1px #72b6bc}
+.important-calendar-day.selected{background:#e1f3f2;border-color:#4b9a9f;color:#155b63;box-shadow:inset 0 0 0 1px #4b9a9f}
+.important-calendar-day:focus-visible{outline:3px solid #76b6bc;outline-offset:1px}
+.important-calendar-day-number{font-size:14px;line-height:18px}
+.important-calendar-marker{display:flex;align-items:center;gap:3px;justify-content:center;min-height:13px}
+.important-calendar-dot{width:7px;height:7px;background:#cc7897;border-radius:50%;display:block}
+.important-calendar-count{font-size:10px;font-weight:800;color:#875167;line-height:1}
+.important-calendar-selected{margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
+.important-calendar-selected-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.important-calendar-selected-head h3{font-size:17px;margin:0}
+.important-calendar-selected-head .tiny{margin:4px 0 0}
+.important-calendar-entries{display:grid;gap:8px;margin-top:14px}
+.important-calendar-empty{margin:15px 0 0}
+.important-calendar-entry-note{padding:0 14px 12px 55px;overflow-wrap:anywhere;white-space:pre-line}
+.important-calendar-form{border:1px solid #d6e8e7;border-radius:17px;background:#f7fbfb;padding:17px;margin-top:18px}
+.important-calendar-form h3{margin:0 0 4px}
+.important-calendar-form .field label{line-height:1.35}
+@media(max-width:430px){
+ .important-calendar-grid{gap:4px}
+ .important-calendar-day{min-height:55px;border-radius:9px;padding:8px 2px 5px;gap:5px}
+ .important-calendar-day-number{font-size:13px}
+ .important-calendar-month{font-size:18px}
+ .important-calendar-controls .btn{min-height:40px;min-width:38px;padding:7px}
+ .important-calendar-selected-head .btn{min-height:42px}
+ .important-calendar-form{padding:13px}
+}
 </style>
 </head>
 <body>
@@ -461,7 +498,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','☑','Tasks'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -797,70 +834,89 @@ function birthdayEditCalendarValue(b){
 function importantDatesPanel(){
  const birthday=state.birthdays.find(b=>b.id===ui.editBirthdayId);
  const event=state.importantEvents.find(e=>e.id===ui.editImportantId);
- const editType=birthday?'birthday':event?.type||'birthday';
- const editing=!!(birthday||event);
- const chosenDate=birthday?birthdayEditCalendarValue(birthday):event?.start||TODAY;
- const nextBirthdays=birthdayEvents(TODAY,370);
- const saved=[
-  ...state.birthdays.map(b=>{
-   const occurrence=nextBirthdays.find(x=>x.person.id===b.id);
-   const nextDate=occurrence?.date||birthdayDate(b,Number(TODAY.slice(0,4))+1);
-   return {kind:'birthday',id:b.id,title:b.name+"'s birthday",
-    date:nextDate,end:nextDate,sortDate:nextDate,
-    summary:formatDate(nextDate,{weekday:'short',month:'short',day:'numeric'})+
-     (occurrence?.age!==null&&occurrence?.age>=0?' · Turning '+occurrence.age:''),
-    past:false};
-  }),
-  ...state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).map(e=>{
-   const ending=validCalendarDate(e.end)&&e.end>=e.start?e.end:e.start;
-   const past=ending<TODAY;
-   const active=e.start<=TODAY&&ending>=TODAY;
-   const dateLabel=ending>e.start?(active?'Through '+formatDate(ending,{month:'short',day:'numeric',year:'numeric'}):
-     formatDate(e.start,{month:'short',day:'numeric',year:'numeric'})+' – '+formatDate(ending,{month:'short',day:'numeric',year:'numeric'})):
-     formatDate(e.start,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-   return {kind:IMPORTANT_TYPES[e.type]?e.type:'other',id:e.id,title:e.title,
-     date:e.start,end:ending,sortDate:past?'9999-12-31':active?TODAY:e.start,
-     summary:dateLabel+(e.time?' · '+e.time:'')+(past?' · Past':''),
-     past};
-  })
- ].sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||
-   (a.past&&b.past?b.date.localeCompare(a.date):String(a.title).localeCompare(String(b.title))));
- const show=editing||ui.importantOpen?' open':'';
+ const editing=!!(birthday||event),type=birthday?'birthday':event?.type||'other';
+ const month=/^\d{4}-\d{2}$/.test(ui.importantMonth)&&validCalendarDate(ui.importantMonth+'-01')?ui.importantMonth:TODAY.slice(0,7);
+ const chosen=validCalendarDate(ui.importantDate)&&ui.importantDate.slice(0,7)===month?ui.importantDate:month+'-01';
+ const first=month+'-01',firstDate=dateOf(first);
+ const lastDate=new Date(firstDate.getFullYear(),firstDate.getMonth()+1,0,12);
+ const gridStart=addDays(first,-firstDate.getDay());
+ const gridEnd=addDays(iso(lastDate),6-lastDate.getDay());
+ const days=Array.from({length:daysBetween(gridStart,gridEnd)+1},(_,i)=>addDays(gridStart,i));
+ const occurrences=importantOccurrences(gridStart,daysBetween(gridStart,gridEnd));
+ const onDate=date=>occurrences.filter(e=>e.start<=date&&e.end>=date);
+ const entries=onDate(chosen);
+ const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||chosen;
+ const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
  const expanded=ui.importantPanelOpen||editing;
- return '<section class="card span12" id="importantDatesSection">'+
- '<button type="button" class="important-panel-toggle" data-important-toggle="1" aria-expanded="'+expanded+'">'+
- '<span><span class="kicker">PERSONAL CALENDAR</span><span class="important-panel-title">Important dates</span>'+
- '<span class="tiny">'+saved.length+' saved</span></span>'+
- '<span class="important-panel-arrow" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+
- (expanded?'<div class="important-panel-body">'+
- '<p class="tiny" style="margin:0">Birthdays, friends, concerts, vacations and travel — all in one place.</p>'+
- (saved.length?'<div class="important-date-list">'+saved.map(x=>{
-  const key=(x.kind==='birthday'?'birthday:':'event:')+x.id,selected=ui.selectedImportantId===key;
+ const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+ const calendar='<div class="important-calendar" aria-label="Personal calendar">'+
+  '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(formatDate(first,{month:'long',year:'numeric'}))+'</h3>'+
+  '<div class="important-calendar-controls"><button type="button" class="btn small" data-important-month-step="-1" aria-label="Previous month">‹</button>'+
+  '<button type="button" class="btn small" data-important-today="1">Today</button>'+
+  '<button type="button" class="btn small" data-important-month-step="1" aria-label="Next month">›</button></div></div>'+
+  '<div class="important-calendar-grid">'+
+  weekdays.map(w=>'<div class="important-calendar-weekday" aria-hidden="true">'+w+'</div>').join('')+
+  days.map(date=>{
+   const items=onDate(date),isSelected=date===chosen,isToday=date===TODAY,isOutside=date.slice(0,7)!==month;
+   const classes='important-calendar-day'+(isSelected?' selected':'')+(isToday?' is-today':'')+(isOutside?' outside':'');
+   const description=formatDate(date,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+
+    (items.length?' · '+items.length+' '+(items.length===1?'activity':'activities'):' · no activities');
+   return '<button type="button" class="'+classes+'" data-important-day="'+date+'" aria-label="'+h(description)+'" aria-pressed="'+isSelected+'">'+
+    '<span class="important-calendar-day-number">'+Number(date.slice(8,10))+'</span>'+
+    (items.length?'<span class="important-calendar-marker" aria-hidden="true"><span class="important-calendar-dot"></span>'+
+      (items.length>1?'<span class="important-calendar-count">'+items.length+'</span>':'')+'</span>':'')+
+    '</button>';
+  }).join('')+'</div></div>';
+ const rows=entries.map(e=>{
+  const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,selected=ui.selectedImportantId===e.id;
+  const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
+  const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
+  const time=e.time?' · '+e.time:'';
+  const summary=itemType.label+time+age+span;
   return '<div class="important-date-entry'+(selected?' selected':'')+'">'+
-    '<button type="button" class="important-date-trigger" data-important-select="'+h(key)+'" aria-expanded="'+selected+'" aria-label="'+h(x.title)+', '+h(x.summary)+'. Tap for options">'+
-     '<span class="important-date-emoji" aria-hidden="true">'+IMPORTANT_TYPES[x.kind].emoji+'</span>'+
-     '<span class="important-date-copy"><strong>'+h(x.title)+'</strong><span class="tiny">'+h(x.summary)+'</span></span>'+
-     '<span class="important-date-chevron" aria-hidden="true">'+(selected?'⌃':'⌄')+'</span></button>'+
-    (selected?'<div class="important-date-actions" role="group" aria-label="Actions for '+h(x.title)+'">'+
-     '<button type="button" class="btn small" data-important-edit="'+h(key)+'">Edit</button>'+
-     '<button type="button" class="btn small danger" data-important-delete="'+h(key)+'">Delete</button></div>':'')+
+   '<button type="button" class="important-date-trigger" data-important-select="'+h(e.id)+'" aria-expanded="'+selected+'" aria-label="'+h(e.title)+'. '+h(summary)+'. Tap for options">'+
+    '<span class="important-date-emoji" aria-hidden="true">'+itemType.emoji+'</span>'+
+    '<span class="important-date-copy"><strong>'+h(e.title)+'</strong><span class="tiny">'+h(summary)+'</span></span>'+
+    '<span class="important-date-chevron" aria-hidden="true">'+(selected?'⌃':'⌄')+'</span></button>'+
+   (selected?(e.notes?'<div class="tiny important-calendar-entry-note">'+h(e.notes)+'</div>':'')+
+    '<div class="important-date-actions" role="group" aria-label="Actions for '+h(e.title)+'">'+
+    '<button type="button" class="btn small" data-important-edit="'+h(e.id)+'">Edit</button>'+
+    '<button type="button" class="btn small danger" data-important-delete="'+h(e.id)+'">Delete</button></div>':'')+
    '</div>';
- }).join('')+'</div>':'<p class="tiny" style="margin:15px 0 0">No important dates saved yet. Add one below.</p>')+
- '<details class="important-details" id="importantDatesDetails"'+show+'><summary>+ '+(editing?'Edit important date':'Log important dates')+'</summary>'+
- '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
- '<div class="field"><label for="importantType">What kind of date?</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>'<option value="'+value+'" '+(value===editType?'selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('')+'</select></div>'+
- '<div class="field"><label for="importantTitle">Person or event</label><input id="importantTitle" name="title" required maxlength="140" placeholder="Who or what is it?" value="'+h(birthday?.name||event?.title||'')+'"></div>'+
- '<div class="inlinefields"><div class="field"><label for="importantDate">Date — choose from calendar</label><input type="date" name="date" id="importantDate" required value="'+h(chosenDate)+'"></div>'+
- '<div class="field" id="importantEndField"'+(editType==='birthday'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
- '<div class="inlinefields"><div class="field" id="importantTimeField"'+(editType==='birthday'?' style="display:none"':'')+'><label for="importantTime">Time (optional)</label><input type="time" id="importantTime" name="time" value="'+h(event?.time||'')+'"></div>'+
- '<div class="field" id="importantRelationField"'+(editType!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
- '<div class="field" id="importantBirthYearField"'+(editType!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Otherwise, the birthday repeats every year without showing an age.</span></div>'+
- '<div class="field" id="importantNotesField"'+(editType==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
- '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'+ Save important date')+'</button>'+
- (editing?'<button type="button" class="btn" data-important-cancel="1">Cancel</button>':'')+'</div></form>'+
- '<p class="fineprint" style="margin-top:12px">Birthdays repeat annually. Other plans can last multiple days. Entries stay on this device and are included in backups; no work-calendar sync.</p></details></div>':'')+
-
- '</section>';
+ }).join('');
+ const form=editing||ui.importantOpen?
+  '<div class="important-calendar-form" id="importantDatesDetails">'+
+  '<h3>'+(editing?'Edit activity':'Add an activity')+'</h3>'+
+  '<p class="tiny" style="margin:0">Choose a type and enter the details for your calendar.</p>'+
+  '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
+  '<div class="field"><label for="importantType">Type</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
+   '<option value="'+value+'" '+(value===type?'selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('')+'</select></div>'+
+  '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||'')+'"></div>'+
+  '<div class="inlinefields"><div class="field"><label for="importantDate">Date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
+  '<div class="field" id="importantEndField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
+  '<div class="inlinefields"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantTime">Time (optional)</label><input type="time" id="importantTime" name="time" value="'+h(event?.time||'')+'"></div>'+
+  '<div class="field" id="importantRelationField"'+(type!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
+  '<div class="field" id="importantBirthYearField"'+(type!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Birthdays repeat each year, even without a birth year.</span></div>'+
+  '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
+  '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save activity')+'</button>'+
+  '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
+ return '<section class="card span12" id="importantDatesSection">'+
+  '<button type="button" class="important-panel-toggle" data-important-toggle="1" aria-expanded="'+expanded+'">'+
+  '<span><span class="kicker">PERSONAL CALENDAR</span><span class="important-panel-title">Important dates</span>'+
+  '<span class="tiny">'+total+' saved</span></span>'+
+  '<span class="important-panel-arrow" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+
+  (expanded?'<div class="important-panel-body">'+
+   '<p class="tiny" style="margin:0">Choose a day to see what is planned. Dots show days with activities.</p>'+
+   calendar+
+   '<div class="important-calendar-selected"><div class="important-calendar-selected-head"><div>'+
+    '<h3>'+h(formatDate(chosen,{weekday:'long',month:'long',day:'numeric'}))+'</h3>'+
+    '<p class="tiny">'+entries.length+' '+(entries.length===1?'activity':'activities')+'</p></div>'+
+    '<button type="button" class="btn small primary" data-important-new="1">+ Add activity</button></div>'+
+   (entries.length?'<div class="important-calendar-entries">'+rows+'</div>':
+    '<p class="tiny important-calendar-empty">Nothing scheduled for this day.</p>')+
+   form+
+   '<p class="fineprint" style="margin:15px 0 0">Birthdays repeat every year. Other activities may span several days. Entries stay on this device and in your backups.</p>'+
+   '</div>':'')+'</section>';
 }
 
 const RECIPE_CATEGORIES=[['dinner','Dinner'],['breakfast','Breakfast'],['dessert','Dessert']];
@@ -1162,7 +1218,7 @@ if(mode){
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
 }const tab=b.dataset.tab;if(tab){ui.tab=tab;if(tab==='lift')ui.week=currentWeek();render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));render();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}if(b.dataset.complete){const s=ensureSession(ui.week,ui.day),any=Object.values(s.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}s.completed=true;s.completedAt=new Date().toISOString();save();render();return}if(b.dataset.reopen){ensureSession(ui.week,ui.day).completed=false;save();render();return}if(b.dataset.addPreset!==undefined){const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber});save();render();return}if(b.dataset.deleteFood){state.foods=state.foods.filter(f=>f.id!==b.dataset.deleteFood);save();render();return}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
- ui.tab='life';ui.importantPanelOpen=true;ui.importantOpen=true;render();
+ ui.tab='life';ui.importantPanelOpen=true;ui.importantOpen=false;ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;render();
  document.getElementById('importantDatesSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
@@ -1230,6 +1286,33 @@ if(b.dataset.importantToggle){
   ui.editBirthdayId=null;ui.editImportantId=null
  }
  render();return
+}
+if(b.dataset.importantMonthStep){
+ const step=Number(b.dataset.importantMonthStep);
+ if(step!==1&&step!==-1)return;
+ const d=dateOf((ui.importantMonth||TODAY.slice(0,7))+'-01');
+ d.setMonth(d.getMonth()+step);
+ const target=iso(d).slice(0,7);
+ const day=Number((ui.importantDate||TODAY).slice(8,10));
+ const maximum=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+ ui.importantMonth=target;ui.importantDate=target+'-'+String(Math.min(day,maximum)).padStart(2,'0');
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ render();return
+}
+if(b.dataset.importantToday){
+ ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ render();return
+}
+if(b.dataset.importantDay){
+ const date=b.dataset.importantDay;if(!validCalendarDate(date))return;
+ ui.importantDate=date;ui.importantMonth=date.slice(0,7);
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ render();return
+}
+if(b.dataset.importantNew){
+ ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;
+ render();document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
 }
 if(b.dataset.importantSelect){
  const raw=String(b.dataset.importantSelect),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
@@ -1512,7 +1595,12 @@ document.addEventListener('submit',ev=>{
     if(oldBirthday)state.birthdays=state.birthdays.filter(b=>b.id!==oldBirthday.id)
    }
   }
-  ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;save();render();return
+  if(kind==='birthday'){
+    const visibleYear=Number((ui.importantMonth||TODAY.slice(0,7)).slice(0,4));
+    ui.importantDate=birthdayDate({month:Number(date.slice(5,7)),day:Number(date.slice(8,10))},visibleYear);
+   }else ui.importantDate=date;
+   ui.importantMonth=ui.importantDate.slice(0,7);
+   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;save();render();return
  }
  if(ev.target.id==='cycleForm'){
   ev.preventDefault();
