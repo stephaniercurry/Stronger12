@@ -474,6 +474,13 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .event-today-only-label span{display:grid;gap:3px;min-width:0}
 .event-today-only-label strong{color:var(--ink);font-size:14px;line-height:1.4}
 .event-today-only-label small{font-size:12px;line-height:1.45;color:var(--muted)}
+
+/* AM/PM time entry without relying on browser or system 24-hour preferences. */
+.event-clock-picker{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.85fr) minmax(0,1fr);gap:7px;align-items:end}
+.event-clock-picker .field{min-width:0;gap:5px}
+.event-clock-picker select{width:100%;min-width:0;padding:10px 7px;font-size:16px}
+#importantTimeField .field-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}
+@media(max-width:430px){.event-clock-picker{gap:5px}.event-clock-picker select{padding:10px 5px}}
 </style>
 </head>
 <body>
@@ -876,7 +883,7 @@ const IMPORTANT_TYPES={
  vacation:{label:'Vacation',emoji:'🌴'},
  work:{label:'Work travel',emoji:'✈️'},
  appointment:{label:'Appointment',emoji:'📅'},
- fitness:{label:'Workout / yoga',emoji:'💪'},
+ fitness:{label:'Workout',emoji:'💪'},
  other:{label:'Other',emoji:'⭐'}
 };
 function validCalendarDate(s){
@@ -947,12 +954,43 @@ function importantOccurrences(from=TODAY,days=370){
  }
  return result.sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||a.time.localeCompare(b.time)||String(a.title).localeCompare(String(b.title)));
 }
+/* Keep canonical HH:MM internally for sorting and old backups; display AM/PM. */
+function eventTimeParts(value){
+ const m=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(value||''));
+ if(!m)return {hour:'',minute:'00',period:'PM'};
+ const hour=Number(m[1]);
+ return {hour:String(hour%12||12),minute:m[2],period:hour<12?'AM':'PM'};
+}
+function eventTimeDisplay(value){
+ const parts=eventTimeParts(value);
+ return parts.hour?parts.hour+':'+parts.minute+' '+parts.period:'';
+}
+function eventTimeFromForm(fd){
+ const hour=String(fd.get('timeHour')||''),minute=String(fd.get('timeMinute')??'00'),
+  period=String(fd.get('timePeriod')||'PM');
+ if(!hour)return '';
+ const hour12=Number(hour),min=Number(minute);
+ if(!/^(?:[1-9]|1[0-2])$/.test(hour)||!/^\d{2}$/.test(minute)||min>59||!['AM','PM'].includes(period))return null;
+ return String((hour12%12)+(period==='PM'?12:0)).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+function eventTimePicker(value){
+ const parts=eventTimeParts(value);
+ return '<div class="event-clock-picker">'+
+ '<div class="field"><label for="importantTimeHour">Hour</label><select id="importantTimeHour" name="timeHour" aria-label="Event hour">'+
+ '<option value=""'+(!parts.hour?' selected':'')+'>No time</option>'+
+ Array.from({length:12},(_,i)=>{const hour=String(i+1);return '<option value="'+hour+'"'+(parts.hour===hour?' selected':'')+'>'+hour+'</option>'}).join('')+'</select></div>'+
+ '<div class="field"><label for="importantTimeMinute">Minute</label><select id="importantTimeMinute" name="timeMinute" aria-label="Event minute">'+
+ Array.from({length:60},(_,i)=>{const minute=String(i).padStart(2,'0');return '<option value="'+minute+'"'+(parts.minute===minute?' selected':'')+'>'+minute+'</option>'}).join('')+'</select></div>'+
+ '<div class="field"><label for="importantTimePeriod">AM / PM</label><select id="importantTimePeriod" name="timePeriod" aria-label="AM or PM">'+
+ ['AM','PM'].map(p=>'<option value="'+p+'"'+(parts.period===p?' selected':'')+'>'+p+'</option>').join('')+'</select></div>'+
+ '</div>';
+}
 function importantEntryText(e,short=false){
  const label=e.end>e.start?
   (e.start===e.end?'':(e.start<TODAY?'Through '+formatDate(e.end):formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}))):
   formatDate(e.start,{weekday:short?'short':'long',month:'short',day:'numeric'});
  const other=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
- const tm=e.time?' · '+h(e.time):'';
+ const tm=e.time?' · '+h(eventTimeDisplay(e.time)||e.time):'';
  return h(label)+tm+other+(e.original?.repeat&&e.original.repeat!=='none'?' · '+h(eventRepeatText(e.original)):'');
 }
 function agendaTodayCard(){
@@ -1037,7 +1075,7 @@ function importantDatesPanel(){
   const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,revealed=ui.selectedImportantId===e.id;
   const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
   const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
-  const time=e.time?' · '+e.time:'';
+  const time=e.time?' · '+h(eventTimeDisplay(e.time)||e.time):'';
   const summary=itemType.label+time+age+span+(e.original?.repeat&&e.original.repeat!=='none'?' · '+eventRepeatText(e.original):'');
   return '<div class="task-swipe event-swipe'+(revealed?' is-revealed':'')+'" data-event-swipe="'+h(e.id)+'">'+
    '<div class="task-swipe-actions">'+
@@ -1065,7 +1103,7 @@ function importantDatesPanel(){
   '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||'')+'"></div>'+
   '<div class="inlinefields"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
   '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
-  '<div class="inlinefields"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantTime">Time (optional)</label><input type="time" id="importantTime" name="time" value="'+h(event?.time||'')+'"></div>'+
+  '<div class="inlinefields"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><span class="field-label">Time (optional)</span>'+eventTimePicker(event?.time||'')+'</div>'+
   '<div class="field" id="importantRelationField"'+(type!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
   '<div class="field" id="importantBirthYearField"'+(type!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Birthdays repeat each year, even without a birth year.</span></div>'+
   '<div class="field" id="importantRepeatField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantRepeat">Repeat</label><select name="repeat" id="importantRepeat">'+Object.entries(EVENT_REPEATS).map(([key,label])=>'<option value="'+key+'" '+(eventRepeat===key?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
@@ -1882,7 +1920,7 @@ document.addEventListener('submit',ev=>{
    title=String(fd.get('title')||'').trim(),
    date=String(fd.get('date')||''),
    endRaw=String(fd.get('endDate')||'').trim(),
-   endDate=endRaw||date,time=String(fd.get('time')||'').trim(),
+   endDate=endRaw||date,time=eventTimeFromForm(fd),
    notes=String(fd.get('notes')||'').trim(),relation=String(fd.get('relation')||'Family'),
    knownYear=fd.get('useBirthYear')!==null;
   if(!Object.hasOwn(IMPORTANT_TYPES,kind)||!title||title.length>140||!validCalendarDate(date)){
@@ -1908,7 +1946,7 @@ document.addEventListener('submit',ev=>{
    const repeatDays=[...new Set(rawDays.map(Number))].filter(d=>Number.isInteger(d)&&d>=0&&d<=6).sort((a,b)=>a-b);
    const recurring=repeat!=='none';
    if(!Object.hasOwn(EVENT_REPEATS,repeat)||(!recurring&&(!validCalendarDate(endDate)||endDate<date))||
-    !/^([01]\d|2[0-3]):[0-5]\d$/.test(time||'00:00')||notes.length>600){
+    time===null||notes.length>600){
     alert('Choose valid event dates, a repeat option, and an optional time.');return
    }
    if(recurring&&repeatUntil&&(!validCalendarDate(repeatUntil)||repeatUntil<date)){
