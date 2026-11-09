@@ -398,6 +398,18 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .event-swipe .task-edit-reveal{background:#467e86}
 .event-swipe .task-more{color:#6e9196}
 @media(prefers-reduced-motion:reduce){.event-swipe .event-row{transition:none}}
+
+/* Recipe Book can be tucked away, with its count always visible. */
+.recipe-panel-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;background:transparent;border:0;text-align:left;padding:0;color:var(--ink);min-height:66px}
+.recipe-panel-heading{display:grid;gap:4px;min-width:0}
+.recipe-panel-title{font-size:21px;font-weight:850;letter-spacing:-.4px;line-height:1.25}
+.recipe-panel-right{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.recipe-panel-right .dinner-emblem{width:45px;height:45px;flex:0 0 45px}
+.recipe-panel-arrow{font-size:24px;color:var(--green);font-weight:800}
+.recipe-panel-toggle:focus-visible{outline:3px solid #76b6bc;outline-offset:5px;border-radius:8px}
+.recipe-panel-body{border-top:1px solid var(--line);padding-top:17px;margin-top:14px}
+.recipe-panel-body .recipe-tabs{margin-top:0}
+@media(max-width:760px){.recipe-panel-title{font-size:20px}.recipe-panel-right{gap:8px}.recipe-panel-right .dinner-emblem{width:42px;height:42px;flex-basis:42px}}
 </style>
 </head>
 <body>
@@ -533,7 +545,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -989,11 +1001,14 @@ function dinnerIdeasPanel(){
  const selectedSubtype=ui.recipeSubtype==='all'||occupied.some(([key])=>key===ui.recipeSubtype)?ui.recipeSubtype:'all';
  const ideas=inCategory.filter(x=>selectedSubtype==='all'||recipeSubtype(x)===selectedSubtype).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(a.name).localeCompare(String(b.name)));
  const edit=state.dinnerIdeas.find(x=>x.id===ui.editDinnerId);
- const editing=!!edit;
+ const editing=!!edit,open=ui.recipeOpen||editing;
  return '<section class="card span12" id="dinnerIdeasSection">'+
- '<div class="row spread wrap"><div><div class="kicker">YOUR LITTLE RECIPE BOOK</div><h2 style="margin:5px 0">Recipe book</h2>'+
- '<p class="tiny" style="margin:0">'+state.dinnerIdeas.length+' saved · ideas for every kind of meal</p></div>'+
- '<span class="dinner-emblem" aria-hidden="true">🍲</span></div>'+
+ '<button type="button" class="recipe-panel-toggle" data-recipe-toggle="1" aria-expanded="'+open+'" aria-controls="recipePanelBody">'+
+ '<span class="recipe-panel-heading"><span class="kicker">YOUR LITTLE RECIPE BOOK</span><span class="recipe-panel-title">Recipe book</span>'+
+ '<span class="tiny">'+state.dinnerIdeas.length+' saved · ideas for every kind of meal</span></span>'+
+ '<span class="recipe-panel-right"><span class="dinner-emblem" aria-hidden="true">🍲</span>'+
+ '<span class="recipe-panel-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></span></button>'+
+ (open?'<div class="recipe-panel-body" id="recipePanelBody">'+
  '<div class="recipe-tabs" role="group" aria-label="Recipe categories">'+RECIPE_CATEGORIES.map(([key,label])=>{
   const count=state.dinnerIdeas.filter(x=>recipeCategory(x)===key).length;
   return '<button type="button" data-recipe-tab="'+key+'" class="recipe-tab'+(ui.recipeTab===key?' active':'')+'" aria-pressed="'+(ui.recipeTab===key)+'">'+label+'<span class="recipe-tab-count">'+count+'</span></button>';
@@ -1037,7 +1052,7 @@ function dinnerIdeasPanel(){
      '<button type="button" class="btn small dinner-add-grocery" data-dinner-grocery="'+h(x.id)+'">+ Add ingredients to groceries</button>':'')+
      '</div>':'')+'</div>';
  }).join('')+'</div>':'<div class="dinner-empty">No '+h((RECIPE_CATEGORIES.find(([k])=>k===ui.recipeTab)?.[1]||'recipes').toLowerCase())+' ideas yet. Tap Add idea to start this section.</div>')+
- '</section>';
+ '</div>':'')+'</section>';
 }
 
 
@@ -1413,6 +1428,11 @@ if(b.dataset.birthdayDelete){const i=state.birthdays.findIndex(x=>x.id===b.datas
 if(b.dataset.yogaEdit){ui.editYogaId=b.dataset.yogaEdit;ui.tab='lift';render();window.scrollTo(0,0);return}
 if(b.dataset.yogaCancel){ui.editYogaId=null;render();return}
 if(b.dataset.yogaDelete){const i=state.yogaSessions.findIndex(y=>y.id===b.dataset.yogaDelete);if(i>=0&&confirm('Delete this yoga entry?')){state.yogaSessions.splice(i,1);if(ui.editYogaId===b.dataset.yogaDelete)ui.editYogaId=null;save();render()}return}
+if(b.dataset.recipeToggle){
+ ui.recipeOpen=!ui.recipeOpen;
+ if(!ui.recipeOpen){ui.editDinnerId=null;ui.swipedDinnerId=null;ui.expandedDinnerId=null;ui.dinnerNotice=''}
+ render();return
+}
 if(b.dataset.recipeSubtype){
  if(b.dataset.recipeSubtype!=='all'&&!RECIPE_SUBTYPES[ui.recipeTab].some(([key])=>key===b.dataset.recipeSubtype))return;
  ui.recipeSubtype=b.dataset.recipeSubtype;ui.swipedDinnerId=null;ui.expandedDinnerId=null;ui.editDinnerId=null;ui.dinnerNotice='';
@@ -1427,7 +1447,7 @@ if(b.dataset.dinnerReveal){ui.swipedDinnerId=ui.swipedDinnerId===b.dataset.dinne
 if(b.dataset.dinnerExpand){ui.expandedDinnerId=ui.expandedDinnerId===b.dataset.dinnerExpand?null:b.dataset.dinnerExpand;ui.swipedDinnerId=null;render();return}
 if(b.dataset.dinnerEdit){
  const item=state.dinnerIdeas.find(x=>x.id===b.dataset.dinnerEdit);if(!item)return;
- ui.recipeTab=recipeCategory(item);ui.recipeSubtype='all';ui.editDinnerId=b.dataset.dinnerEdit;ui.swipedDinnerId=null;ui.dinnerNotice='';ui.tab='life';render();
+ ui.recipeOpen=true;ui.recipeTab=recipeCategory(item);ui.recipeSubtype='all';ui.editDinnerId=b.dataset.dinnerEdit;ui.swipedDinnerId=null;ui.dinnerNotice='';ui.tab='life';render();
  document.getElementById('dinnerIdeasSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
