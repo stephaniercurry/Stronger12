@@ -761,7 +761,7 @@ function importantDatesPanel(){
  ].sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||
    (a.past&&b.past?b.date.localeCompare(a.date):String(a.title).localeCompare(String(b.title))));
  const show=editing||ui.importantOpen?' open':'';
- return '<section class="card span12" id="importantDatesSection"><div class="row spread wrap"><div><div class="kicker">PERSONAL CALENDAR</div><h2 style="margin:6px 0">Important dates</h2><p class="tiny" style="margin:0">Birthdays, friends, concerts, vacations and travel — all in one place.</p></div><span class="pill">'+all.length+' saved</span></div>'+
+ return '<section class="card span12" id="importantDatesSection"><div class="row spread wrap"><div><div class="kicker">PERSONAL CALENDAR</div><h2 style="margin:6px 0">Important dates</h2><p class="tiny" style="margin:0">Birthdays, friends, concerts, vacations and travel — all in one place.</p></div><span class="pill">'+saved.length+' saved</span></div>'+
  (saved.length?'<div class="important-date-list">'+saved.map(x=>{
   const key=x.kind+':'+x.id,selected=ui.selectedImportantId===key;
   return '<div class="important-date-entry'+(selected?' selected':'')+'">'+
