@@ -868,6 +868,7 @@ const IMPORTANT_TYPES={
  vacation:{label:'Vacation',emoji:'🌴'},
  work:{label:'Work travel',emoji:'✈️'},
  appointment:{label:'Appointment',emoji:'📅'},
+ fitness:{label:'Workout / yoga',emoji:'💪'},
  other:{label:'Other',emoji:'⭐'}
 };
 function validCalendarDate(s){
@@ -1745,6 +1746,19 @@ if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCy
 if(el.id==='sessionDate'){ensureSession(ui.week,ui.day).date=el.value;save();return}
 if(el.id==='foodDate'){ui.foodDate=el.value;render();return}
 if(el.id==='chartEx'){ui.chartEx=el.value;render();return}
+if(el.name==='repeatDays'){
+ const field=document.getElementById('importantRepeatDaysField');
+ if(field)field.dataset.userPicked='true';
+ return
+}
+if(el.id==='importantDate'){
+ const field=document.getElementById('importantRepeatDaysField');
+ if(field&&field.dataset.userPicked!=='true'&&!ui.editImportantId&&validCalendarDate(el.value)){
+  const weekday=dateOf(el.value).getDay();
+  field.querySelectorAll('input[name="repeatDays"]').forEach(box=>{box.checked=Number(box.value)===weekday});
+ }
+ return
+}
 if(el.id==='importantType'||el.id==='importantRepeat'){
  const isBirthday=document.getElementById('importantType')?.value==='birthday';
  const rule=document.getElementById('importantRepeat')?.value||'none';
