@@ -136,14 +136,14 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline-color:#71bd
 .task-edit-reveal{background:#467e86}
 .task-swipe{border-color:#e6e8f0}
 .task-meta,.tiny,.fineprint{color:var(--muted)}
-.today-grid>.card:nth-child(1),.today-grid>.card:nth-child(2){position:relative;overflow:hidden}
-.today-grid>.card:nth-child(1)::before,.today-grid>.card:nth-child(2)::before{
+.today-grid>.today-tasks-card,.today-grid>.today-calendar-card{position:relative;overflow:hidden}
+.today-grid>.today-tasks-card::before,.today-grid>.today-calendar-card::before{
  content:"";position:absolute;left:24px;right:24px;top:0;height:4px;border-radius:0 0 9px 9px;
  background:#73c6c2;pointer-events:none;
 }
-.today-grid>.card:nth-child(2)::before{background:#f3aabd}
-.today-grid>.card:nth-child(1) .kicker{color:#287c83}
-.today-grid>.card:nth-child(2) .kicker{color:#a45d7b}
+.today-grid>.today-calendar-card::before{background:#f3aabd}
+.today-grid>.today-tasks-card .kicker{color:#287c83}
+.today-grid>.today-calendar-card .kicker{color:#a45d7b}
 .mobilebar{background:rgba(255,255,255,.98);border-top-color:#e9e9f0;box-shadow:0 -6px 28px rgba(42,48,92,.075)}
 .mobilebar button{color:#6c758b;border-radius:13px}
 .mobilebar button.active{background:#eaf5f4;color:#206d76}
@@ -698,7 +698,7 @@ function taskUndoBanner(){
 }
 function taskSummary(){
  const all=todayTasks(),done=all.filter(t=>taskDone(t)).length;
- return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(TODAY,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">What matters today</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished items remain visible tomorrow</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
+ return '<section class="card span12 today-tasks-card"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(TODAY,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">What matters today</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished items remain visible tomorrow</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
  '<form id="quickTaskForm" class="task-quick"><input type="text" name="title" maxlength="140" required aria-label="Quick add task" placeholder="Add something for today…"><button type="submit" class="btn primary">+ Add</button></form>'+
  '<div class="task-list">'+(all.length?all.slice(0,5).map(t=>taskItem(t,true)).join(''):'<div class="empty">Nothing on your list yet. Add one thing you want to accomplish today.</div>')+'</div>'+
  (all.length>5?'<button class="btn small" style="margin-top:12px" data-tab="tasks">See all '+all.length+' tasks →</button>':'')+'</section>';
@@ -918,7 +918,7 @@ function agendaTodayCard(){
  const nextPanel=next&&!nextIsShown?
    '<div class="next-holiday"><div class="kicker">NEXT PAGAN HOLIDAY · '+h(daysBetween(TODAY,next.date))+' DAYS AWAY</div>'+
    holidayRow(next)+'</div>':'';
- return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Open Planner →</button></div>'+
+ return '<section class="card span12 today-calendar-card"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Open Planner →</button></div>'+
  '<div class="agenda-cols"><div><h3>Today</h3>'+(today.length?todayShown.map(row).join(''):'<p class="tiny">Nothing scheduled for today.</p>')+'</div>'+
  '<div><h3>Coming up · next 7 days</h3>'+(week.length?weekShown.map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
  nextPanel+
