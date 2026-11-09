@@ -877,7 +877,7 @@ function importantDatesPanel(){
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
  const expanded=true;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
- const calendar='<div class="important-calendar" aria-label="Personal calendar">'+
+ const calendar='<div class="important-calendar" aria-label="Planner calendar">'+
   '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(formatDate(first,{month:'long',year:'numeric'}))+'</h3>'+
   '<div class="important-calendar-controls"><button type="button" class="btn small" data-important-month-step="-1" aria-label="Previous month">‹</button>'+
   '<button type="button" class="btn small" data-important-today="1">Today</button>'+
