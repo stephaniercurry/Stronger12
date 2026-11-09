@@ -763,7 +763,7 @@ function importantDatesPanel(){
  const show=editing||ui.importantOpen?' open':'';
  return '<section class="card span12" id="importantDatesSection"><div class="row spread wrap"><div><div class="kicker">PERSONAL CALENDAR</div><h2 style="margin:6px 0">Important dates</h2><p class="tiny" style="margin:0">Birthdays, friends, concerts, vacations and travel — all in one place.</p></div><span class="pill">'+saved.length+' saved</span></div>'+
  (saved.length?'<div class="important-date-list">'+saved.map(x=>{
-  const key=x.kind+':'+x.id,selected=ui.selectedImportantId===key;
+  const key=(x.kind==='birthday'?'birthday:':'event:')+x.id,selected=ui.selectedImportantId===key;
   return '<div class="important-date-entry'+(selected?' selected':'')+'">'+
     '<button type="button" class="important-date-trigger" data-important-select="'+h(key)+'" aria-expanded="'+selected+'" aria-label="'+h(x.title)+', '+h(x.summary)+'. Tap for options">'+
      '<span class="important-date-emoji" aria-hidden="true">'+IMPORTANT_TYPES[x.kind].emoji+'</span>'+
