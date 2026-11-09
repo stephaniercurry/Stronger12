@@ -466,6 +466,14 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .event-weekday input:checked+span{background:#d9efed;border-color:#77babb;color:#1e686d}
 .event-weekday input:focus-visible+span{outline:3px solid #86bdbb;outline-offset:2px}
 @media(max-width:420px){.event-weekdays{gap:4px}.event-weekday{flex-basis:31px;min-width:0}}
+
+/* Optional calendar event visibility on Today, without hiding it from Planner. */
+.event-today-only{padding:12px;border:1px solid #d9e9e7;border-radius:12px;background:#f8fbfb}
+.event-today-only .event-today-only-label{display:flex;align-items:flex-start;gap:11px;cursor:pointer}
+.event-today-only input[type=checkbox]{width:23px;height:23px;flex:0 0 23px;margin:0;accent-color:#278c8f}
+.event-today-only-label span{display:grid;gap:3px;min-width:0}
+.event-today-only-label strong{color:var(--ink);font-size:14px;line-height:1.4}
+.event-today-only-label small{font-size:12px;line-height:1.45;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -956,7 +964,7 @@ function agendaTodayCard(){
   emoji:x.emoji,learn:x.learn,approx:x.approx
  }));
  const events=personal.concat(inWeek).sort((a,b)=>a.sortDate.localeCompare(b.sortDate)||String(a.time||'').localeCompare(String(b.time||''))||String(a.title).localeCompare(String(b.title)));
- const today=events.filter(e=>e.start<=TODAY&&e.end>=TODAY),week=events.filter(e=>e.start>TODAY);
+ const today=events.filter(e=>e.start<=TODAY&&e.end>=TODAY),week=events.filter(e=>e.start>TODAY&&!e.original?.showOnlyOnDay);
  const todayShown=today.slice(0,5),weekShown=week.slice(0,7);
  const holidayRow=(x)=>{
   return '<div class="agenda-event"><span class="agenda-emoji">'+x.emoji+'</span><div><strong>'+h(x.title||x.name)+'</strong>'+
@@ -1001,6 +1009,7 @@ function importantDatesPanel(){
  const eventRepeat=Object.hasOwn(EVENT_REPEATS,event?.repeat)?event.repeat:'none';
  const selectedWeekDays=event?eventWeeklyDays(event):[dateOf(chosenFormDate).getDay()];
  const hasRecurringDays=eventRepeat==='weekly'||eventRepeat==='biweekly';
+ const showOnlyOnDay=event?event.showOnlyOnDay===true:type==='fitness';
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
  const expanded=true;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1062,6 +1071,8 @@ function importantDatesPanel(){
   '<div class="field" id="importantRepeatField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantRepeat">Repeat</label><select name="repeat" id="importantRepeat">'+Object.entries(EVENT_REPEATS).map(([key,label])=>'<option value="'+key+'" '+(eventRepeat===key?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
   '<fieldset class="event-repeat-days" id="importantRepeatDaysField"'+(!hasRecurringDays||type==='birthday'?' style="display:none"':'')+'><legend>Repeat on</legend><div class="event-weekdays">'+EVENT_WEEKDAYS.map((day,index)=>'<label class="event-weekday"><input type="checkbox" name="repeatDays" value="'+index+'" '+(selectedWeekDays.includes(index)?'checked':'')+'><span>'+day+'</span></label>').join('')+'</div><span class="tiny">Select one or more days, such as Mon and Wed for yoga.</span></fieldset>'+
   '<div class="field" id="importantRepeatUntilField"'+(eventRepeat==='none'||type==='birthday'?' style="display:none"':'')+'><label for="importantRepeatUntil">Stop repeating after (optional)</label><input type="date" name="repeatUntil" id="importantRepeatUntil" value="'+h(event?.repeatUntil||'')+'"><span class="tiny">Leave blank to continue indefinitely. The start date is the earliest possible occurrence.</span></div>'+
+  '<div class="field event-today-only" id="importantTodayOnlyField"'+(type==='birthday'?' style="display:none"':'')+'>'+
+  '<label class="event-today-only-label"><input id="importantShowOnlyToday" name="showOnlyOnDay" type="checkbox" '+(showOnlyOnDay?'checked':'')+'> <span><strong>Show only on the day of the event</strong><small>Hide future occurrences from Coming up on Today. Still visible in Planner.</small></span></label></div>'+
   '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
   '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save event')+'</button>'+
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
@@ -1746,6 +1757,7 @@ if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCy
 if(el.id==='sessionDate'){ensureSession(ui.week,ui.day).date=el.value;save();return}
 if(el.id==='foodDate'){ui.foodDate=el.value;render();return}
 if(el.id==='chartEx'){ui.chartEx=el.value;render();return}
+if(el.id==='importantShowOnlyToday'){el.dataset.userPicked='true';return}
 if(el.name==='repeatDays'){
  const field=document.getElementById('importantRepeatDaysField');
  if(field)field.dataset.userPicked='true';
@@ -1760,7 +1772,8 @@ if(el.id==='importantDate'){
  return
 }
 if(el.id==='importantType'||el.id==='importantRepeat'){
- const isBirthday=document.getElementById('importantType')?.value==='birthday';
+ const selectedType=document.getElementById('importantType')?.value||'other';
+ const isBirthday=selectedType==='birthday';
  const rule=document.getElementById('importantRepeat')?.value||'none';
  const recurring=!isBirthday&&rule!=='none';
  for(const [id,visible] of [
@@ -1768,10 +1781,16 @@ if(el.id==='importantType'||el.id==='importantRepeat'){
   ['importantNotesField',!isBirthday],['importantRelationField',isBirthday],
   ['importantBirthYearField',isBirthday],['importantRepeatField',!isBirthday],
   ['importantRepeatDaysField',recurring&&(rule==='weekly'||rule==='biweekly')],
-  ['importantRepeatUntilField',recurring]
+  ['importantRepeatUntilField',recurring],['importantTodayOnlyField',!isBirthday]
  ]){
   const node=document.getElementById(id);
   if(node)node.style.display=visible?'':'none'
+ }
+ if(el.id==='importantType'){
+  const only=document.getElementById('importantShowOnlyToday');
+  if(only&&only.dataset.userPicked!=='true'&&!ui.editImportantId&&!ui.editBirthdayId){
+   only.checked=selectedType==='fitness';
+  }
  }
  return
 }
@@ -1884,7 +1903,7 @@ document.addEventListener('submit',ev=>{
     if(oldEvent)state.importantEvents=state.importantEvents.filter(e=>e.id!==oldEvent.id)
    }
   }else{
-   const repeat=String(fd.get('repeat')||'none'),repeatUntil=String(fd.get('repeatUntil')||'').trim();
+   const repeat=String(fd.get('repeat')||'none'),repeatUntil=String(fd.get('repeatUntil')||'').trim(),showOnlyOnDay=fd.get('showOnlyOnDay')!==null;
    const rawDays=typeof fd.getAll==='function'?fd.getAll('repeatDays'):[];
    const repeatDays=[...new Set(rawDays.map(Number))].filter(d=>Number.isInteger(d)&&d>=0&&d<=6).sort((a,b)=>a-b);
    const recurring=repeat!=='none';
@@ -1900,7 +1919,7 @@ document.addEventListener('submit',ev=>{
    }
    const oldBirthday=state.birthdays.find(b=>b.id===ui.editBirthdayId),
     existing=state.importantEvents.find(e=>e.id===ui.editImportantId),
-    data={title,type:kind,start:date,end:recurring?date:endDate,time,notes,repeat,
+    data={title,type:kind,start:date,end:recurring?date:endDate,time,notes,repeat,showOnlyOnDay,
      repeatDays:repeat==='weekly'||repeat==='biweekly'?repeatDays:[],
      repeatUntil:recurring?repeatUntil:''};
    if(existing)Object.assign(existing,data);
