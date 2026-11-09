@@ -363,6 +363,19 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
  .important-calendar-selected-head .btn{min-height:42px}
  .important-calendar-form{padding:13px}
 }
+
+/* Planner: two kinds of calendar entries, two separate creation buttons. */
+.important-calendar-dot.task{background:#268d96}
+.important-calendar-dot.event{background:#cf809c}
+.planner-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:11px 0}
+.planner-legend span{display:inline-flex;gap:7px;align-items:center;font-size:12px;color:var(--muted);font-weight:700}
+.planner-new-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.planner-new-buttons .btn{min-height:42px}
+.planner-day-group{margin-top:19px}
+.planner-day-group h4{font-size:14px;margin:0 0 10px}
+.planner-day-group .task-list{display:grid;gap:9px}
+.planner-day-group .task-swipe{margin:0}
+@media(max-width:760px){.planner-new-buttons{width:100%}.planner-new-buttons .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -497,8 +510,8 @@ const FOODS=[
 {name:'1 cup cottage cheese',protein:25,fiber:0},
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
-const NAV=[['home','⌂','Today'],['tasks','☑','Tasks'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
+const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:''};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -570,22 +583,22 @@ function taskSort(a,b){
  return String(a.due||TODAY).localeCompare(String(b.due||TODAY))||String(a.createdAt||'').localeCompare(String(b.createdAt||''));
 }
 function todayTasks(){return state.tasks.filter(t=>taskOccurs(t)).sort(taskSort)}
-function taskItem(t,compact=false){
- const done=taskDone(t),overdue=(t.repeat||'none')==='none'&&!done&&t.due<TODAY;
+function taskItem(t,compact=false,day=TODAY){
+ const done=taskDone(t,day),overdue=(t.repeat||'none')==='none'&&!done&&t.due<day;
  const revealed=ui.swipedTaskId===t.id;
  return '<div class="task-swipe'+(revealed?' is-revealed':'')+'" data-task-swipe="'+h(t.id)+'">'+
  '<div class="task-swipe-actions">'+
  '<button type="button" class="task-edit-reveal" data-task-edit="'+h(t.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(t.title)+'">Edit</button>'+
  '<button type="button" class="task-delete-reveal" data-task-delete="'+h(t.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Delete '+h(t.title)+'">Delete</button></div>'+
  '<div class="task-item'+(done?' is-done':'')+'">'+
- '<button type="button" class="task-check" aria-label="'+h((done?'Mark incomplete: ':'Mark complete: ')+t.title)+'" aria-pressed="'+done+'" data-task-toggle="'+h(t.id)+'">'+(done?'✓':'')+'</button>'+
+ '<button type="button" class="task-check" aria-label="'+h((done?'Mark incomplete: ':'Mark complete: ')+t.title)+'" aria-pressed="'+done+'" data-task-toggle="'+h(t.id)+'" data-task-date="'+h(day)+'">'+(done?'✓':'')+'</button>'+
  '<div class="task-content"><strong>'+h(t.title)+'</strong>'+
  '<div class="task-meta">'+(overdue?'<span class="task-overdue">Carried from '+h(formatDate(t.due))+'</span>':(t.due&&t.due!==TODAY?'<span>'+h(formatDate(t.due))+'</span>':''))+
  ((t.repeat||'none')!=='none'?'<span>↻ '+h(taskRepeatLabel(t))+'</span>':'')+
  (t.priority==='high'?'<span class="task-priority">Important</span>':'')+
  (ui.taskFilter==='upcoming'&&(t.repeat||'none')!=='none'?'<span>Next: '+h(formatDate(nextTaskDate(t)))+'</span>':'')+'</div>'+
  (!compact&&t.notes?'<p class="task-note">'+h(t.notes)+'</p>':'')+'</div>'+
- ((!compact&&!done&&(t.repeat||'none')==='none'&&t.due<=TODAY)?'<button class="btn small" data-task-tomorrow="'+h(t.id)+'" title="Move to tomorrow">Tomorrow</button>':'')+
+ ((!compact&&day===TODAY&&!done&&(t.repeat||'none')==='none'&&t.due<=TODAY)?'<button class="btn small" data-task-tomorrow="'+h(t.id)+'" title="Move to tomorrow">Tomorrow</button>':'')+
  '<button type="button" class="task-more" data-task-reveal="'+h(t.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(t.title)+'" title="Swipe left or tap to show Edit and Delete">···</button>'+
  '</div></div>';
 }
@@ -606,32 +619,47 @@ function taskUndoBanner(){
 }
 function taskSummary(){
  const all=todayTasks(),done=all.filter(t=>taskDone(t)).length;
- return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(TODAY,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">What matters today</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished items remain visible tomorrow</p></div><button class="btn small" data-tab="tasks">All tasks →</button></div>'+
+ return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(TODAY,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">What matters today</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished items remain visible tomorrow</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
  '<form id="quickTaskForm" class="task-quick"><input type="text" name="title" maxlength="140" required aria-label="Quick add task" placeholder="Add something for today…"><button type="submit" class="btn primary">+ Add</button></form>'+
  '<div class="task-list">'+(all.length?all.slice(0,5).map(t=>taskItem(t,true)).join(''):'<div class="empty">Nothing on your list yet. Add one thing you want to accomplish today.</div>')+'</div>'+
  (all.length>5?'<button class="btn small" style="margin-top:12px" data-tab="tasks">See all '+all.length+' tasks →</button>':'')+'</section>';
 }
-function tasksPage(){
- const all=state.tasks.slice().sort(taskSort);
- const filter=ui.taskFilter;
- const visible=all.filter(t=>filter==='today'?taskOccurs(t):filter==='upcoming'?((t.repeat||'none')==='none'?!t.done&&t.due>TODAY:true):filter==='done'?taskDone(t):true);
- const edit=all.find(t=>t.id===ui.editTaskId);
- const doneCount=todayTasks().filter(t=>taskDone(t)).length;
- const buttons=[['today','Today'],['upcoming','Upcoming'],['all','All'],['done','Completed']];
- return header('Your tasks, in one place.','Make your list in the morning, check things off during the day, and leave unfinished items visible tomorrow. No notifications required.')+
- '<div class="grid"><section class="card span5"><div class="row spread"><h2>'+(edit?'Edit task':'Add a task')+'</h2>'+(edit?'<button class="btn small" data-task-cancel="1">Cancel</button>':'')+'</div>'+
- '<form id="taskForm" class="stack"><div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||'')+'"></div>'+
- '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||TODAY)+'"></div>'+
+function taskScheduledForDate(t,date){
+ const due=validCalendarDate(t.due)?t.due:TODAY;
+ if(date<due)return false;
+ return (t.repeat||'none')==='none'?date===due:taskOccurs(t,date);
+}
+function plannerTasksForDate(date){
+ return state.tasks.filter(t=>date===TODAY?taskOccurs(t,date):taskScheduledForDate(t,date))
+  .sort((a,b)=>Number(taskDone(a,date))-Number(taskDone(b,date))||
+   (a.priority==='high'?-1:b.priority==='high'?1:0)||String(a.title||'').localeCompare(String(b.title||'')));
+}
+function plannerTaskForm(){
+ const edit=state.tasks.find(t=>t.id===ui.editTaskId);
+ if(ui.plannerForm!=='task'&&!edit)return '';
+ return '<div class="important-calendar-form" id="plannerTaskEditor">'+
+ '<h3>'+(edit?'Edit task':'Add task')+'</h3><p class="tiny">Tasks are things to finish; unfinished one-time tasks carry forward on Today.</p>'+
+ '<form id="taskForm" class="stack" style="margin-top:14px">'+
+ '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||'')+'"></div>'+
+ '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.importantDate)+'"></div>'+
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
  '<div class="field"><label for="taskRepeat">Repeat</label><select id="taskRepeat" name="repeat">'+Object.entries(TASK_REPEATS).map(([value,label])=>'<option value="'+value+'" '+((edit?.repeat||'none')===value?'selected':'')+'>'+h(label)+'</option>').join('')+'</select></div>'+
  '<div class="field task-interval-field" id="taskIntervalField" '+((edit?.repeat||'none')==='interval'?'':'style="display:none"')+'><label for="taskIntervalDays">Repeat every how many days?</label><input id="taskIntervalDays" name="repeatDays" type="number" inputmode="numeric" min="1" max="365" step="1" value="'+h(edit?.repeatDays||3)+'" '+((edit?.repeat||'none')==='interval'?'required':'')+'><small class="tiny">Starts on the due date, then repeats every N calendar days.</small></div>'+
- '<div class="field"><label for="taskNotes">Notes (optional)</label><textarea id="taskNotes" name="notes" rows="2" maxlength="1200" placeholder="Details, shopping list, next step…">'+h(edit?.notes||'')+'</textarea></div>'+
- '<button type="submit" class="btn primary">'+(edit?'Save changes':'+ Save task')+'</button></form>'+
- '<p class="fineprint" style="margin-top:12px">Tasks stay on this device, along with your food and workout logs. Backups in Settings include tasks.</p></section>'+
- '<section class="card span7"><div class="row spread wrap"><div><h2 style="margin-bottom:2px">My list</h2><p class="tiny" style="margin:0">'+doneCount+' done today · '+(todayTasks().length-doneCount)+' remaining</p></div></div>'+
+ '<div class="field"><label for="taskNotes">Notes (optional)</label><textarea id="taskNotes" name="notes" rows="2" maxlength="1200" placeholder="Details or next step…">'+h(edit?.notes||'')+'</textarea></div>'+
+ '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save changes':'Save task')+'</button><button type="button" class="btn" data-task-cancel="1">Cancel</button></div></form></div>';
+}
+function tasksPage(){
+ const all=state.tasks.slice().sort(taskSort),filter=ui.taskFilter;
+ const visible=all.filter(t=>filter==='today'?taskOccurs(t):filter==='upcoming'?((t.repeat||'none')==='none'?!t.done&&t.due>TODAY:true):filter==='done'?taskDone(t):true);
+ const doneCount=todayTasks().filter(t=>taskDone(t)).length;
+ const buttons=[['today','Today'],['upcoming','Upcoming'],['all','All'],['done','Completed']];
+ return header('Planner','Your tasks and events in one place. Pick a calendar day to see your plans and add something.')+
+ '<div class="grid">'+importantDatesPanel()+
+ '<section class="card span12" id="plannerTaskList"><div class="row spread wrap"><div><div class="kicker">TO-DO LIST</div><h2 style="margin:5px 0">All your tasks</h2>'+
+ '<p class="tiny" style="margin:0">'+doneCount+' done today · '+(todayTasks().length-doneCount)+' remaining</p></div></div>'+
  '<div class="task-filters" role="group" aria-label="Filter tasks">'+buttons.map(([value,label])=>'<button type="button" class="chip '+(filter===value?'active':'')+'" data-task-filter="'+value+'" aria-pressed="'+(filter===value)+'">'+label+'</button>').join('')+'</div>'+
  '<div class="task-list">'+(visible.length?visible.map(t=>taskItem(t)).join(''):'<div class="empty">No tasks in this view.</div>')+'</div>'+
- '<p class="fineprint" style="margin-top:18px">One-time tasks carry forward automatically if unfinished. Daily, weekday, weekly, and custom-interval tasks repeat on their scheduled days. Swipe a task left for Edit or Delete.</p></section></div>';
+ '<p class="fineprint" style="margin-top:18px">Unfinished one-time tasks carry forward on Today. Events remain on the dates you choose. Swipe a task left or tap ··· to edit or delete it.</p></section></div>';
 }
 
 const YOGA_KINDS=['Hot yoga','Yoga','Gentle / restorative','Other'];
@@ -820,7 +848,7 @@ function agendaTodayCard(){
  const nextPanel=next&&!nextIsShown?
    '<div class="next-holiday"><div class="kicker">NEXT PAGAN HOLIDAY · '+h(daysBetween(TODAY,next.date))+' DAYS AWAY</div>'+
    holidayRow(next)+'</div>':'';
- return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Important dates →</button></div>'+
+ return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Open Planner →</button></div>'+
  '<div class="agenda-cols"><div><h3>Today</h3>'+(today.length?todayShown.map(row).join(''):'<p class="tiny">Nothing scheduled for today.</p>')+'</div>'+
  '<div><h3>Coming up · next 7 days</h3>'+(week.length?weekShown.map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
  nextPanel+
@@ -1079,7 +1107,7 @@ function moneyEnvelopesPanel(){
 
 function lifePage(){
  const open=groceryNeeds(),done=state.groceries.filter(x=>x.checked),edit=state.groceries.find(x=>x.id===ui.editGroceryId),entries=open.concat(done);
- return header('Life, in one place.','Your groceries, recipes, important dates and money—without the extra clutter.')+
+ return header('Life, in one place.','Your groceries, recipes and money—without the extra clutter.')+
  '<div class="grid"><section class="card span12"><div class="row spread wrap"><div><div class="kicker">GROCERY LIST</div><h2 style="margin:5px 0">What do we need?</h2><p class="tiny" style="margin:0">'+open.length+' to buy · '+done.length+' in the cart</p></div><div class="buttonrow"><button class="btn small" data-grocery-share="1">↗ Share list</button><button class="btn small" data-grocery-copy="1">Copy</button></div></div>'+
  '<form id="groceryForm" class="stack" style="margin:16px 0"><div class="field"><label for="groceryName">Item</label><input id="groceryName" name="name" maxlength="110" required placeholder="Milk, spinach, protein powder…" value="'+h(edit?.name||'')+'"></div>'+
  '<div class="inlinefields"><div class="field"><label for="groceryQuantity">Quantity / size (optional)</label><input id="groceryQuantity" name="quantity" maxlength="60" placeholder="2 cartons, 1 lb…" value="'+h(edit?.quantity||'')+'"></div>'+
@@ -1088,7 +1116,7 @@ function lifePage(){
  '<div class="grocery-rows">'+(entries.length?entries.map(x=>'<div class="grocery-row'+(x.checked?' is-bought':'')+'"><button type="button" class="grocery-check" data-grocery-check="'+h(x.id)+'" aria-label="'+h((x.checked?'Mark not bought: ':'Mark bought: ')+x.name)+'" aria-pressed="'+!!x.checked+'">'+(x.checked?'✓':'')+'</button><div class="grocery-name"><strong>'+h(x.name)+'</strong><div class="tiny">'+h(x.quantity||'')+(x.quantity?' · ':'')+h(x.category||'Other')+'</div></div><button class="btn small" data-grocery-edit="'+h(x.id)+'">Edit</button><button class="btn small danger" data-grocery-delete="'+h(x.id)+'" aria-label="Remove '+h(x.name)+'">×</button></div>').join(''):'<div class="empty">Your list is empty. Add an item to begin.</div>')+'</div>'+
  (done.length?'<button class="btn small" data-grocery-clear="1" style="margin-top:15px">Clear '+done.length+' purchased '+(done.length===1?'item':'items')+'</button>':'')+
  '<div class="notice" style="margin-top:17px"><strong>Sharing:</strong> Share list sends the current unpurchased items through your iPhone Share menu. Your son receives a copy, not a live synchronized list. Groceries stay private on your phone unless you choose to send them.</div></section>'+
- dinnerIdeasPanel()+importantDatesPanel()+moneyEnvelopesPanel()+'</div>';
+ dinnerIdeasPanel()+moneyEnvelopesPanel()+'</div>';
 }
 function yogaProgressCard(){
  return '<section class="card span4"><div class="kicker">Yoga sessions logged</div><div class="metric">'+state.yogaSessions.length+'</div><p class="tiny">'+yogaThisWeek().length+' this week · on whatever days worked for you.</p></section>';
