@@ -872,10 +872,10 @@ function importantDatesPanel(){
  const days=Array.from({length:daysBetween(gridStart,gridEnd)+1},(_,i)=>addDays(gridStart,i));
  const occurrences=importantOccurrences(gridStart,daysBetween(gridStart,gridEnd));
  const onDate=date=>occurrences.filter(e=>e.start<=date&&e.end>=date);
- const entries=onDate(chosen);
+ const entries=onDate(chosen),dayTasks=plannerTasksForDate(chosen);
  const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||chosen;
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
- const expanded=ui.importantPanelOpen||editing;
+ const expanded=true;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
  const calendar='<div class="important-calendar" aria-label="Personal calendar">'+
   '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(formatDate(first,{month:'long',year:'numeric'}))+'</h3>'+
@@ -885,14 +885,16 @@ function importantDatesPanel(){
   '<div class="important-calendar-grid">'+
   weekdays.map(w=>'<div class="important-calendar-weekday" aria-hidden="true">'+w+'</div>').join('')+
   days.map(date=>{
-   const items=onDate(date),isSelected=date===chosen,isToday=date===TODAY,isOutside=date.slice(0,7)!==month;
+   const items=onDate(date),plannedTasks=plannerTasksForDate(date),isSelected=date===chosen,isToday=date===TODAY,isOutside=date.slice(0,7)!==month;
    const classes='important-calendar-day'+(isSelected?' selected':'')+(isToday?' is-today':'')+(isOutside?' outside':'');
    const description=formatDate(date,{weekday:'long',month:'long',day:'numeric',year:'numeric'})+
-    (items.length?' · '+items.length+' '+(items.length===1?'activity':'activities'):' · no activities');
+    (' · '+plannedTasks.length+' tasks and '+items.length+' events');
    return '<button type="button" class="'+classes+'" data-important-day="'+date+'" aria-label="'+h(description)+'" aria-pressed="'+isSelected+'">'+
     '<span class="important-calendar-day-number">'+Number(date.slice(8,10))+'</span>'+
-    (items.length?'<span class="important-calendar-marker" aria-hidden="true"><span class="important-calendar-dot"></span>'+
-      (items.length>1?'<span class="important-calendar-count">'+items.length+'</span>':'')+'</span>':'')+
+    '<span class="important-calendar-marker" aria-hidden="true">'+
+      (plannedTasks.length?'<span class="important-calendar-dot task"></span>':'')+
+      (items.length?'<span class="important-calendar-dot event"></span>':'')+
+      (items.length+plannedTasks.length>1?'<span class="important-calendar-count">'+(items.length+plannedTasks.length)+'</span>':'')+'</span>'+
     '</button>';
   }).join('')+'</div></div>';
  const rows=entries.map(e=>{
@@ -912,12 +914,12 @@ function importantDatesPanel(){
     '<button type="button" class="btn small danger" data-important-delete="'+h(e.id)+'">Delete</button></div>':'')+
    '</div>';
  }).join('');
- const form=editing||ui.importantOpen?
+ const form=editing||ui.importantOpen||ui.plannerForm==='event'?
   '<div class="important-calendar-form" id="importantDatesDetails">'+
-  '<h3>'+(editing?'Edit activity':'Add an activity')+'</h3>'+
-  '<p class="tiny" style="margin:0">Choose a type and enter the details for your calendar.</p>'+
+  '<h3>'+(editing?'Edit event':'Add event or birthday')+'</h3>'+
+  '<p class="tiny" style="margin:0">Events stay on their dates; birthdays repeat annually.</p>'+
   '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
-  '<div class="field"><label for="importantType">Type</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
+  '<div class="field"><label for="importantType">Event type</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
    '<option value="'+value+'" '+(value===type?'selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('')+'</select></div>'+
   '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||'')+'"></div>'+
   '<div class="inlinefields"><div class="field"><label for="importantDate">Date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
@@ -926,25 +928,27 @@ function importantDatesPanel(){
   '<div class="field" id="importantRelationField"'+(type!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
   '<div class="field" id="importantBirthYearField"'+(type!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Birthdays repeat each year, even without a birth year.</span></div>'+
   '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
-  '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save activity')+'</button>'+
+  '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save event')+'</button>'+
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
  return '<section class="card span12" id="importantDatesSection">'+
-  '<button type="button" class="important-panel-toggle" data-important-toggle="1" aria-expanded="'+expanded+'">'+
-  '<span><span class="kicker">PERSONAL CALENDAR</span><span class="important-panel-title">Important dates</span>'+
-  '<span class="tiny">'+total+' saved</span></span>'+
-  '<span class="important-panel-arrow" aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button>'+
-  (expanded?'<div class="important-panel-body">'+
-   '<p class="tiny" style="margin:0">Choose a day to see what is planned. Dots show days with activities.</p>'+
-   calendar+
-   '<div class="important-calendar-selected"><div class="important-calendar-selected-head"><div>'+
-    '<h3>'+h(formatDate(chosen,{weekday:'long',month:'long',day:'numeric'}))+'</h3>'+
-    '<p class="tiny">'+entries.length+' '+(entries.length===1?'activity':'activities')+'</p></div>'+
-    '<button type="button" class="btn small primary" data-important-new="1">+ Add activity</button></div>'+
-   (entries.length?'<div class="important-calendar-entries">'+rows+'</div>':
-    '<p class="tiny important-calendar-empty">Nothing scheduled for this day.</p>')+
-   form+
-   '<p class="fineprint" style="margin:15px 0 0">Birthdays repeat every year. Other activities may span several days. Entries stay on this device and in your backups.</p>'+
-   '</div>':'')+'</section>';
+ '<div class="row spread wrap"><div><div class="kicker">YOUR SCHEDULE</div><h2 style="margin:5px 0">Calendar</h2>'+
+ '<p class="tiny" style="margin:0">'+state.tasks.length+' saved tasks · '+total+' saved events and birthdays</p></div></div>'+
+ '<div class="important-panel-body">'+calendar+
+ '<div class="planner-legend"><span><span class="important-calendar-dot task"></span> Tasks</span><span><span class="important-calendar-dot event"></span> Events & birthdays</span></div>'+
+ '<div class="important-calendar-selected"><div class="important-calendar-selected-head"><div>'+
+ '<h3>'+h(formatDate(chosen,{weekday:'long',month:'long',day:'numeric'}))+'</h3>'+
+ '<p class="tiny">'+(entries.length+dayTasks.length)+' '+(entries.length+dayTasks.length===1?'item':'items')+' for this day</p></div>'+
+ '<div class="planner-new-buttons"><button type="button" class="btn small primary" data-planner-add="task">+ Task</button>'+
+ '<button type="button" class="btn small" data-planner-add="event">+ Event</button></div></div>'+
+ '<div class="planner-day-group"><h4>Tasks ('+dayTasks.length+')</h4>'+
+ (dayTasks.length?'<div class="task-list">'+dayTasks.map(t=>taskItem(t,false,chosen)).join('')+'</div>':
+ '<p class="tiny">Nothing on the to-do list for this date.</p>')+'</div>'+
+ '<div class="planner-day-group"><h4>Events & birthdays ('+entries.length+')</h4>'+
+ (entries.length?'<div class="important-calendar-entries">'+rows+'</div>':
+ '<p class="tiny">Nothing scheduled for this date.</p>')+'</div>'+
+ plannerTaskForm()+form+
+ '<p class="fineprint" style="margin-top:15px">Tasks carry forward if unfinished. Events stay on their chosen dates. Your saved data remains private on this device and in backups.</p>'+
+ '</div></section>';
 }
 
 const RECIPE_CATEGORIES=[['dinner','Dinner'],['breakfast','Breakfast'],['dessert','Dessert']];
