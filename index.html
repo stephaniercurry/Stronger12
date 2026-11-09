@@ -1117,6 +1117,47 @@ if(mode){
  document.getElementById('importantDatesSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
+if(b.dataset.moneyToggle){
+ ui.moneyOpen=!ui.moneyOpen;
+ ui.moneyNew=false;ui.moneyEditId=null;ui.moneyAction=null;ui.moneySelectedId=null;
+ render();return
+}
+if(b.dataset.moneyNew){
+ const formOpen=ui.moneyNew||!!ui.moneyEditId;
+ ui.moneyNew=!formOpen;ui.moneyEditId=null;ui.moneyAction=null;ui.moneyMessage='';
+ render();return
+}
+if(b.dataset.moneySelect){
+ const x=state.moneyEnvelopes.find(y=>y.id===b.dataset.moneySelect);
+ if(!x)return;
+ ui.moneySelectedId=ui.moneySelectedId===x.id?null:x.id;
+ ui.moneyAction=null;ui.moneyEditId=null;ui.moneyNew=false;
+ render();return
+}
+if(b.dataset.moneyEdit){
+ const x=state.moneyEnvelopes.find(y=>y.id===b.dataset.moneyEdit);
+ if(!x)return;
+ ui.moneyOpen=true;ui.moneyEditId=x.id;ui.moneyNew=false;ui.moneySelectedId=x.id;
+ ui.moneyAction=null;ui.moneyMessage='';render();return
+}
+if(b.dataset.moneyDelete){
+ const x=state.moneyEnvelopes.find(y=>y.id===b.dataset.moneyDelete);
+ if(!x)return;
+ if(moneyBalance(x)!==0){alert('Move or spend the remaining balance before deleting this envelope.');return}
+ if(!confirm('Delete envelope '+x.name+'? Its activity history will remain visible.'))return;
+ state.moneyEnvelopes=state.moneyEnvelopes.filter(y=>y.id!==x.id);
+ ui.moneyEditId=null;ui.moneySelectedId=null;ui.moneyAction=null;ui.moneyNew=false;
+ ui.moneyMessage='Envelope deleted.';save();render();return
+}
+if(b.dataset.moneyActionCancel){ui.moneyAction=null;render();return}
+if(b.dataset.moneyAction){
+ const type=b.dataset.moneyAction,x=state.moneyEnvelopes.find(y=>y.id===b.dataset.moneyId);
+ if(!x||!['add','spend','move'].includes(type))return;
+ if(type!=='add'&&moneyBalance(x)===0)return;
+ if(type==='move'&&state.moneyEnvelopes.length<2)return;
+ ui.moneyOpen=true;ui.moneySelectedId=x.id;ui.moneyEditId=null;ui.moneyNew=false;
+ ui.moneyAction={type,id:x.id};ui.moneyMessage='';render();return
+}
 if(b.dataset.importantSelect){
  const raw=String(b.dataset.importantSelect),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
  if(split<0)return;
@@ -1288,6 +1329,56 @@ if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),
  ui.week=currentWeek()
  }else state.settings[k]=v;save();render();return}});
 document.addEventListener('submit',ev=>{
+ if(ev.target.id==='moneyEnvelopeForm'){
+  ev.preventDefault();
+  const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),
+    kind=String(fd.get('kind')||'spend'),rawGoal=String(fd.get('goal')||'').trim();
+  const goalCents=rawGoal&&rawGoal!=='0'&&rawGoal!=='0.00'?moneyAmount(rawGoal):0;
+  if(!name||name.length>64||!['spend','save'].includes(kind)||goalCents===null){
+   alert('Enter a name, choose a purpose, and use a valid positive goal or leave it blank.');return
+  }
+  const existing=state.moneyEnvelopes.find(x=>x.id===ui.moneyEditId);
+  if(!existing&&state.moneyEnvelopes.length>=40){alert('The wallet supports up to 40 envelopes.');return}
+  const data={name,kind,goalCents};
+  if(existing)Object.assign(existing,data);
+  else state.moneyEnvelopes.push({id:uid(),...data,amountCents:0,createdAt:new Date().toISOString()});
+  ui.moneyMessage=(existing?'Updated ':'Created ')+name+'. Add money only when you have it available.';
+  ui.moneyEditId=null;ui.moneyNew=false;ui.moneyOpen=true;ui.moneyAction=null;
+  save();render();return
+ }
+ if(ev.target.id==='moneyActionForm'){
+  ev.preventDefault();
+  const {type,id}=ui.moneyAction||{},from=state.moneyEnvelopes.find(x=>x.id===id),
+   fd=new FormData(ev.target),amount=moneyAmount(fd.get('amount')),
+   note=String(fd.get('note')||'').trim(),toId=String(fd.get('toId')||'');
+  if(!from||!['add','spend','move'].includes(type)||amount===null||note.length>140){
+   alert('Enter a valid amount greater than zero and a short optional note.');return
+  }
+  const current=moneyBalance(from);
+  if(type!=='add'&&amount>current){
+   alert('Not enough money in '+from.name+'. Available: '+moneyText(current)+'.');return
+  }
+  const destination=type==='move'?state.moneyEnvelopes.find(x=>x.id===toId&&x.id!==id):null;
+  if(type==='move'&&!destination){alert('Choose a different envelope to move money to.');return}
+  if(type==='add'&&(!Number.isSafeInteger(current+amount))) {
+   alert('The envelope balance would be too large.');return
+  }
+  if(destination&&!Number.isSafeInteger(moneyBalance(destination)+amount)){
+   alert('The receiving envelope balance would be too large.');return
+  }
+  if(type==='add')from.amountCents=current+amount;
+  else from.amountCents=current-amount;
+  if(destination)destination.amountCents=moneyBalance(destination)+amount;
+  const transaction={id:uid(),type,amountCents:amount,at:new Date().toISOString(),note,
+    fromId:type==='add'?null:id,fromName:type==='add'?'':from.name,
+    toId:type==='add'?id:destination?.id||null,
+    toName:type==='add'?from.name:destination?.name||''};
+  state.moneyHistory.push(transaction);
+  ui.moneyMessage=type==='add'?moneyText(amount)+' assigned to '+from.name+'.':
+    type==='spend'?moneyText(amount)+' spent from '+from.name+'.':
+      moneyText(amount)+' moved to '+destination.name+'.';
+  ui.moneyAction=null;ui.moneyOpen=true;save();render();return
+ }
  if(ev.target.id==='dinnerForm'){
   ev.preventDefault();
   const fd=new FormData(ev.target);
