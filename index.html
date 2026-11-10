@@ -507,6 +507,14 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .money-history .btn.small{white-space:nowrap}
 @media(max-width:410px){.money-history-toolbar{gap:5px}.money-history-toggle{flex-wrap:wrap;gap:3px}.money-history-amount{font-size:12px}.money-tx-swipe .money-history-row{gap:4px;padding:8px 5px 8px 8px}}
 @media(prefers-reduced-motion:reduce){.money-tx-swipe .money-history-row{transition:none}}
+
+/* One-tap spending directly from the Today money card. */
+.money-today-envelope.is-selected{border-color:#2c9595;background:#eaf6f4;box-shadow:0 0 0 1px #77b6b2}
+.money-today-spend-form{background:#f7fbfa;border:1px solid #cce5e2;border-radius:13px;padding:13px;margin:0 0 15px}
+.money-today-spend-form h3{margin:0;font-size:15px}
+.money-today-spend-form .tiny{margin:0}
+.money-today-spend-form input{font-size:16px}
+.money-today-confirm{padding:8px 10px;background:#eaf6ef;border-radius:8px;color:#316854;margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -1440,16 +1448,21 @@ function yogaProgressCard(){
 
 
 function moneyTodayCard(){
- const spend=state.moneyEnvelopes.filter(x=>x.kind!=='save');
- const total=spend.reduce((sum,x)=>sum+moneyBalance(x),0);
- const preview=spend.slice(0,4);
+ const spend=state.moneyEnvelopes.filter(x=>x.kind!=='save'),total=spend.reduce((sum,x)=>sum+moneyBalance(x),0);
+ const preview=spend.slice(0,4),selected=spend.find(x=>x.id===ui.todaySpendId&&moneyBalance(x)>0);
  return '<section class="card span7 money-today-card">'+
   '<div class="row spread wrap"><div><div class="kicker">READY TO ENJOY</div><h2 style="margin:5px 0">Money to spend</h2></div>'+
   (spend.length?'<span class="money-today-total">'+moneyText(total)+'</span>':'')+'</div>'+
+  (ui.todayMoneyMessage?'<p class="tiny money-today-confirm" role="status">'+h(ui.todayMoneyMessage)+'</p>':'')+
   (preview.length?'<div class="money-today-envelopes">'+preview.map(x=>
-   '<button class="money-today-envelope" type="button" data-money-shortcut="'+h(x.id)+'" aria-label="'+h(x.name)+': '+moneyText(moneyBalance(x))+'. Tap to manage">'+
+   '<button class="money-today-envelope'+(ui.todaySpendId===x.id?' is-selected':'')+'" type="button" data-money-shortcut="'+h(x.id)+'" aria-pressed="'+(ui.todaySpendId===x.id)+'" aria-label="'+h(x.name)+': '+moneyText(moneyBalance(x))+'. Tap to '+(moneyBalance(x)>0?'record spending':'add money')+'">'+
    '<span>'+h(x.name)+'</span><strong>'+moneyText(moneyBalance(x))+'</strong></button>').join('')+'</div>':
    '<p class="tiny money-today-empty">Give a little spending money its own envelope, and know what’s yours to enjoy.</p>')+
+  (selected?'<form id="moneyTodaySpendForm" class="stack money-today-spend-form">'+
+   '<h3>Spend from '+h(selected.name)+'</h3><p class="tiny">'+moneyText(moneyBalance(selected))+' available</p>'+
+   '<div class="field"><label for="todaySpendAmount">Amount ($)</label><input type="number" inputmode="decimal" id="todaySpendAmount" name="amount" min="0.01" step="0.01" placeholder="0.00" required></div>'+
+   '<div class="field"><label for="todaySpendNote">What was it for? (optional)</label><input id="todaySpendNote" type="text" name="note" maxlength="140" placeholder="Coffee, lunch…"></div>'+
+   '<div class="buttonrow"><button type="submit" class="btn primary">Record spending</button><button type="button" class="btn" data-money-today-cancel="1">Cancel</button></div></form>':'')+
   (spend.length>preview.length?'<p class="tiny" style="margin:10px 0 0">+'+(spend.length-preview.length)+' more envelopes in Life</p>':'')+
   '<button class="btn small" data-money-open="1">'+(spend.length?'Open envelopes →':'Set up envelopes →')+'</button>'+
  '</section>';
@@ -1649,12 +1662,16 @@ if(b.dataset.moneyOpen){
 if(b.dataset.moneyShortcut){
  const envelope=state.moneyEnvelopes.find(x=>x.id===b.dataset.moneyShortcut&&x.kind!=='save');
  if(!envelope)return;
- ui.tab='life';ui.moneyOpen=true;ui.moneyNew=false;ui.moneyEditId=null;
- ui.moneySelectedId=envelope.id;ui.moneyAction=null;ui.moneyMessage='';
- render();
- document.getElementById('moneySection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
- return
+ if(moneyBalance(envelope)<=0){
+  ui.tab='life';ui.moneyOpen=true;ui.moneyNew=false;ui.moneyEditId=null;
+  ui.moneySelectedId=envelope.id;ui.moneyAction={type:'add',id:envelope.id};ui.moneyMessage='';
+  render();document.getElementById('moneySection')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+ }
+ ui.todaySpendId=ui.todaySpendId===envelope.id?null:envelope.id;
+ ui.todayMoneyMessage='';
+ render();document.getElementById('todaySpendAmount')?.focus?.();return
 }
+if(b.dataset.moneyTodayCancel){ui.todaySpendId=null;render();return}
 if(b.dataset.moneyToggle){
  ui.moneyOpen=!ui.moneyOpen;
  ui.moneyNew=false;ui.moneyEditId=null;ui.moneyAction=null;ui.moneySelectedId=null;
@@ -1988,6 +2005,16 @@ if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),
  ui.week=currentWeek()
  }else state.settings[k]=v;save();render();return}});
 document.addEventListener('submit',ev=>{
+ if(ev.target.id==='moneyTodaySpendForm'){
+  ev.preventDefault();
+  const envelope=state.moneyEnvelopes.find(x=>x.id===ui.todaySpendId&&x.kind!=='save');
+  const fd=new FormData(ev.target),amountCents=moneyAmount(fd.get('amount')),note=String(fd.get('note')||'').trim();
+  if(!envelope||amountCents===null||note.length>140){alert('Enter a valid amount and an optional short note.');return}
+  const result=moneyCommitTransaction({type:'spend',amountCents,note,fromId:envelope.id,toId:null});
+  if(result.error){alert(result.error);return}
+  ui.todayMoneyMessage=moneyText(amountCents)+' spent from '+envelope.name+'.';
+  ui.todaySpendId=null;save();render();return
+ }
  if(ev.target.id==='moneyActivityForm'){
   ev.preventDefault();
   const editing=state.moneyHistory.find(x=>x.id===ui.moneyTxEditId);
