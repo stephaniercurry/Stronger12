@@ -1604,6 +1604,41 @@ if(mode){
 if(b.dataset.todayShowAll){
  state.settings.todaySections={};save();render();return
 }
+if(b.dataset.moneyHistoryToggle){
+ ui.moneyHistoryOpen=!ui.moneyHistoryOpen;
+ if(!ui.moneyHistoryOpen){ui.moneyTxEditId=null;ui.moneyTxNew=false;ui.swipedMoneyTxId=null}
+ render();return
+}
+if(b.dataset.moneyTxNew){
+ ui.moneyOpen=true;ui.moneyHistoryOpen=true;ui.moneyTxNew=true;
+ ui.moneyTxEditId=null;ui.swipedMoneyTxId=null;ui.moneyActivityType='spend';
+ render();document.getElementById('moneyActivityForm')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
+}
+if(b.dataset.moneyTxCancel){
+ ui.moneyTxNew=false;ui.moneyTxEditId=null;ui.swipedMoneyTxId=null;render();return
+}
+if(b.dataset.moneyTxReveal){
+ const id=b.dataset.moneyTxReveal;
+ if(!state.moneyHistory.some(x=>x.id===id))return;
+ ui.swipedMoneyTxId=ui.swipedMoneyTxId===id?null:id;render();return
+}
+if(b.dataset.moneyTxEdit){
+ const id=b.dataset.moneyTxEdit;
+ if(!state.moneyHistory.some(x=>x.id===id))return;
+ ui.moneyHistoryOpen=true;ui.moneyOpen=true;ui.moneyTxNew=false;
+ ui.moneyTxEditId=id;ui.swipedMoneyTxId=null;
+ render();document.getElementById('moneyActivityForm')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
+}
+if(b.dataset.moneyTxDelete){
+ const tx=state.moneyHistory.find(x=>x.id===b.dataset.moneyTxDelete);
+ if(!tx)return;
+ if(!confirm('Delete this '+moneyText(tx.amountCents)+' activity and adjust envelope balances?'))return;
+ const outcome=moneyCommitTransaction(null,tx);
+ if(outcome.error){alert(outcome.error);return}
+ ui.moneyMessage='Activity deleted. Envelope balances updated.';
+ ui.moneyTxEditId=null;ui.moneyTxNew=false;ui.swipedMoneyTxId=null;
+ save();render();return
+}
 if(b.dataset.moneyOpen){
  ui.tab='life';ui.moneyOpen=true;ui.moneyNew=false;ui.moneyEditId=null;
  ui.moneyAction=null;ui.moneySelectedId=null;ui.moneyMessage='';
@@ -1850,12 +1885,14 @@ if(b.dataset.print){window.print();return}});
 let rowTouchStart=null;
 document.addEventListener('touchstart',ev=>{
  const target=ev.target;
- const dinner=target.closest?.('[data-dinner-swipe]');
- const event=dinner?null:target.closest?.('[data-event-swipe]');
- const task=dinner||event?null:target.closest?.('[data-task-swipe]');
- if((!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
- const t=ev.touches[0],kind=dinner?'dinner':event?'event':'task',row=dinner||event||task;
- rowTouchStart={kind,id:row.dataset[kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe'],x:t.clientX,y:t.clientY};
+ const money=target.closest?.('[data-money-tx-swipe]');
+ const dinner=money?null:target.closest?.('[data-dinner-swipe]');
+ const event=money||dinner?null:target.closest?.('[data-event-swipe]');
+ const task=money||dinner||event?null:target.closest?.('[data-task-swipe]');
+ if((!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
+ const t=ev.touches[0],kind=money?'money':dinner?'dinner':event?'event':'task',row=money||dinner||event||task;
+ const key=kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
+ rowTouchStart={kind,id:row.dataset[key],x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener('touchcancel',()=>{rowTouchStart=null},{passive:true});
 document.addEventListener('touchend',ev=>{
@@ -1863,9 +1900,10 @@ document.addEventListener('touchend',ev=>{
  if(!start||ev.changedTouches.length!==1)return;
  const t=ev.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.25)return;
- if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null}
- else if(start.kind==='event'){ui.selectedImportantId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null}
- else{ui.swipedTaskId=dx<0?start.id:null;ui.swipedDinnerId=null;ui.selectedImportantId=null}
+ if(start.kind==='money'){ui.swipedMoneyTxId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null}
+ else if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ else if(start.kind==='event'){ui.selectedImportantId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedMoneyTxId=null}
+ else{ui.swipedTaskId=dx<0?start.id:null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  if(ev.cancelable)ev.preventDefault();
  render();
 },{passive:false});
@@ -1876,6 +1914,12 @@ if(el.dataset.todayVisibility){
  if(!TODAY_SECTIONS.some(([key])=>key===id))return;
  state.settings.todaySections={...(state.settings.todaySections||{}),[id]:!!el.checked};
  save();render();return
+}
+if(el.id==='moneyActivityType'){
+ ui.moneyActivityType=el.value;
+ const dest=document.getElementById('moneyActivityDestinationField');
+ if(dest)dest.style.display=el.value==='move'?'':'none';
+ return
 }
 if(el.id==='weekPick'){ui.week=Number(el.value);ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}
 if(el.id==='dinnerCategory'){
@@ -1944,6 +1988,26 @@ if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),
  ui.week=currentWeek()
  }else state.settings[k]=v;save();render();return}});
 document.addEventListener('submit',ev=>{
+ if(ev.target.id==='moneyActivityForm'){
+  ev.preventDefault();
+  const editing=state.moneyHistory.find(x=>x.id===ui.moneyTxEditId);
+  const fd=new FormData(ev.target),type=String(fd.get('type')||''),
+   envelopeId=String(fd.get('envelopeId')||''),destinationId=String(fd.get('destinationId')||''),
+   amountCents=moneyAmount(fd.get('amount')),note=String(fd.get('note')||'').trim();
+  if(!['add','spend','move'].includes(type)||amountCents===null||note.length>140){
+   alert('Choose an activity and enter a valid positive amount.');return
+  }
+  if(!state.moneyEnvelopes.some(e=>e.id===envelopeId)){alert('Choose an existing envelope.');return}
+  if(type==='move'&&(!state.moneyEnvelopes.some(e=>e.id===destinationId)||destinationId===envelopeId)){
+   alert('Choose a different destination envelope.');return
+  }
+  const tx={type,amountCents,note,fromId:type==='add'?null:envelopeId,toId:type==='add'?envelopeId:type==='move'?destinationId:null};
+  const result=moneyCommitTransaction(tx,editing||null);
+  if(result.error){alert(result.error);return}
+  ui.moneyMessage=(editing?'Updated ':'Recorded ')+moneyText(amountCents)+' '+(type==='add'?'deposit':type==='spend'?'spending':'transfer')+'.';
+  ui.moneyHistoryOpen=true;ui.moneyTxNew=false;ui.moneyTxEditId=null;ui.swipedMoneyTxId=null;
+  save();render();return
+ }
  if(ev.target.id==='moneyEnvelopeForm'){
   ev.preventDefault();
   const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),
