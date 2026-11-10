@@ -515,6 +515,21 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .money-today-spend-form .tiny{margin:0}
 .money-today-spend-form input{font-size:16px}
 .money-today-confirm{padding:8px 10px;background:#eaf6ef;border-radius:8px;color:#316854;margin:10px 0 0}
+
+.rest-timer-card{position:sticky;top:8px;z-index:12;margin:14px 0 18px;padding:12px 13px;border:1px solid #afd7d2;border-radius:15px;background:#edf9f6;box-shadow:0 4px 16px rgba(23,68,61,.1)}
+.rest-timer-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.rest-timer-top>div:first-child{display:grid;gap:2px}
+.rest-timer-heading{font-size:15px;line-height:1.25;color:var(--ink)}
+.rest-timer-readout{display:grid;justify-items:end;gap:0}
+.rest-timer-readout strong{font-size:28px;font-weight:850;letter-spacing:-1px;line-height:1.2;font-variant-numeric:tabular-nums;color:#206d6b}
+.rest-timer-status{font-size:11px;font-weight:650;color:#527e78;line-height:1.3;text-align:right}
+.rest-timer-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:9px}
+.rest-presets,.rest-controls{display:flex;align-items:center;gap:5px}
+.rest-preset{border:1px solid #b2d1cf;background:white;color:#216d68;border-radius:9px;min-height:37px;min-width:51px;padding:6px 9px;font-size:13px;font-weight:750;font-variant-numeric:tabular-nums}
+.rest-preset.is-selected{border-color:#408b85;background:#d5efea}
+.rest-controls .btn{min-height:37px;padding:7px 10px;font-weight:750}
+.rest-preset:focus-visible{outline:3px solid #80bbad;outline-offset:2px}
+@media(max-width:410px){.rest-timer-card{padding:10px;top:5px}.rest-timer-heading{font-size:14px}.rest-timer-readout strong{font-size:26px}.rest-timer-status{font-size:10px}.rest-timer-actions{gap:6px}.rest-preset{min-width:46px;padding:5px 7px}.rest-controls .btn{padding:6px 9px}}
 </style>
 </head>
 <body>
@@ -1538,6 +1553,38 @@ function workoutModeCard(){
  [['home','⌂ Home'],['gym','▣ Gym'],['yoga','☯ Yoga']].map(([id,label])=>'<button type="button" class="chip '+(mode===id?'active':'')+'" data-workout-mode="'+id+'" aria-pressed="'+(mode===id)+'">'+label+'</button>').join('')+'</div>'+
  (sessionHasLogs(session||{sets:{}})?'<p class="tiny" style="margin:10px 0 0">This day has strength sets saved. You can still choose Yoga; the saved strength work stays available. Its Home/Gym location is locked.</p>':'')+'</section>';
 }
+/* Rest timer uses a deadline so locking the phone doesn't slow its countdown. */
+const restTimer={duration:90,remaining:90,endsAt:0,running:false,complete:false};
+function restLeft(){
+ if(!restTimer.running)return restTimer.remaining;
+ const remaining=Math.max(0,Math.ceil((restTimer.endsAt-Date.now())/1000));
+ if(!remaining){restTimer.running=false;restTimer.remaining=0;restTimer.complete=true}
+ return remaining;
+}
+function restClock(seconds){const n=Math.max(0,Math.ceil(seconds));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0')}
+function restCaption(left){return restTimer.complete?'Rest complete — ready for your next set':restTimer.running?'Resting…':left<restTimer.duration?'Paused':'Ready when you are'}
+function restAction(left){return restTimer.running?'Pause':restTimer.complete?'Start again':left<restTimer.duration?'Resume':'Start'}
+function restTimerCard(){
+ const left=restLeft();
+ return '<section class="rest-timer-card" aria-label="Rest timer between sets">'+
+ '<div class="rest-timer-top"><div><span class="kicker">BETWEEN SETS</span><strong class="rest-timer-heading">Rest timer</strong></div>'+
+ '<div class="rest-timer-readout"><strong id="restTimerClock" role="timer" aria-live="off">'+restClock(left)+'</strong>'+
+ '<span id="restTimerStatus" class="rest-timer-status" aria-live="polite">'+restCaption(left)+'</span></div></div>'+
+ '<div class="rest-timer-actions"><div class="rest-presets" role="group" aria-label="Start a rest timer">'+
+ [60,90,120].map(n=>'<button type="button" class="rest-preset'+(restTimer.duration===n?' is-selected':'')+'" data-rest-seconds="'+n+'" aria-pressed="'+(restTimer.duration===n)+'" aria-label="Start '+n+' seconds of rest">'+restClock(n)+'</button>').join('')+'</div>'+
+ '<div class="rest-controls"><button type="button" class="btn small" data-rest-toggle="1" id="restTimerToggle">'+restAction(left)+'</button>'+
+ '<button type="button" class="btn small" data-rest-reset="1">Reset</button></div></div></section>';
+}
+function updateRestTimerDisplay(){
+ const clock=document.getElementById('restTimerClock');
+ if(!clock)return;
+ const left=restLeft();
+ clock.textContent=restClock(left);
+ const status=document.getElementById('restTimerStatus');
+ if(status&&status.textContent!==restCaption(left))status.textContent=restCaption(left);
+ const toggle=document.getElementById('restTimerToggle');
+ if(toggle)toggle.textContent=restAction(left);
+}
 function lift(){
  const w=ui.week,d=ui.day,mode=workoutMode(w,d),ph=phase(w),head=header('Workout.','Pick a day and activity. Move your strength sessions around without losing the 12-week plan.')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
  if(mode==='yoga')return head+yogaWorkoutCard()+
@@ -1555,6 +1602,7 @@ function lift(){
  '<p class="tiny" style="margin:5px 0 0">'+h(routineWeekSummary(w))+'</p></div>'+
  '<div class="inlinefields" style="margin-bottom:8px"><div class="field"><label for="sessionDate">Training date</label><input id="sessionDate" type="date" value="'+h(session.date)+'"></div>'+
  '<div class="field"><label>Selected day</label><div class="pill" style="align-self:start">'+h(formatDate(scheduledDate(w,d),{weekday:'short',month:'short',day:'numeric'}))+'</div></div></div>'+
+ restTimerCard()+
  plan.ids.map((id,i)=>exerciseCard(id,i,session,w)).join('')+
  '<div class="field" style="margin-top:20px"><label for="sessionNotes">Notes</label><textarea id="sessionNotes" rows="3" placeholder="How did it feel?">'+h(session.notes||'')+'</textarea></div>'+
  '<div class="buttonrow" style="margin-top:15px"><button class="btn primary" data-complete="1">'+(session.completed?'✓ Update session':'✓ Finish & save session')+'</button>'+
@@ -1590,7 +1638,27 @@ async function shareBackup(){const file=backupFile();if(navigator.canShare&&navi
   dl(file,file.name);markBackup();render();alert('A JSON backup file has been downloaded. On iPhone, choose Save to Files to keep it in iCloud Drive.');}
 async function exportData(kind){if(kind==='share'){const name='stronger12-backup-'+iso(new Date())+'.json';const file=new File([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Stronger / 12 backup'});return;}catch(err){if(err&&err.name==='AbortError')return;}}dl(new Blob([await file.text()],{type:'application/json'}),name);alert('Backup downloaded. Save the file to iCloud Drive or Files so it is not only on this phone.');return;}if(kind==='json'){const file=backupFile();dl(file,file.name);markBackup();render();return}const lines=['cycle,date,week,day,routine,location,exercise,set,load,unit,reps_or_seconds,reps_left,session_completed,notes'];Object.values(state.workouts).sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(s=>Object.entries(s.sets||{}).forEach(([id,sets])=>sets.forEach((x,i)=>{if(!x||(!x.reps&&!x.weight))return;lines.push([(s.cycleId||'cycle-1'),s.date,s.week,s.day,sessionRoutine(s),s.venue||'home',EX[id]?.name||id,i+1,x.weight??'',state.settings.weightUnit,x.reps??'',x.rir??'',s.completed?'yes':'no',s.notes??''].map(csvCell).join(','))})));dl(new Blob([lines.join('\n')],{type:'text/csv'}),'stronger12-workouts-'+TODAY+'.csv');const foods=['date,meal,food,protein_g,fiber_g',...state.foods.map(f=>[f.date,f.meal,f.name,f.protein,f.fiber].map(csvCell).join(','))];dl(new Blob([foods.join('\n')],{type:'text/csv'}),'stronger12-foods-'+TODAY+'.csv')}
 function isWholeNumber(n){return Number.isFinite(n)&&n>0}
-document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const mode=b.dataset.workoutMode;
+document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+if(b.dataset.restSeconds){
+ const seconds=Number(b.dataset.restSeconds);
+ if(![60,90,120].includes(seconds))return;
+ restTimer.duration=seconds;restTimer.remaining=seconds;
+ restTimer.endsAt=Date.now()+seconds*1000;restTimer.running=true;restTimer.complete=false;
+ render();return
+}
+if(b.dataset.restToggle){
+ const left=restLeft();
+ if(restTimer.running){restTimer.remaining=left;restTimer.running=false}
+ else{const seconds=restTimer.complete||left<=0?restTimer.duration:left;
+  restTimer.remaining=seconds;restTimer.endsAt=Date.now()+seconds*1000;
+  restTimer.running=true;restTimer.complete=false}
+ render();return
+}
+if(b.dataset.restReset){
+ restTimer.running=false;restTimer.remaining=restTimer.duration;
+ restTimer.endsAt=0;restTimer.complete=false;render();return
+}
+const mode=b.dataset.workoutMode;
 if(mode){
  if(!['home','gym','yoga'].includes(mode))return;
  const current=workoutMode(ui.week,ui.day);
@@ -2238,6 +2306,7 @@ function refreshTodayDate(){
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshTodayDate()});
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('focus',refreshTodayDate);
 render();
+setInterval(updateRestTimerDisplay,500);
 /* Refresh app code after a service-worker update without erasing personal data.
    Preserve in-progress form edits until the user chooses to refresh. */
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
