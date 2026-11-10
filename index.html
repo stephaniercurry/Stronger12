@@ -1634,7 +1634,7 @@ function workoutSummaryInfo(session){
   'Status: '+(session.completed?'Completed':'In progress'),
   'Program: '+cycleLabel,
   'Cycle: '+(cycleIndex>=0?cycleIndex+1:1)+' · Week '+(session.week||ui.week),
-  'Workout: '+routineName(routine)+' — '+plan.title,
+  'Workout: '+(routineName(routine)===plan.title?plan.title:routineName(routine)+' — '+plan.title),
   'Location: '+((session.venue||'home')==='gym'?'Gym':'Home'),
   'Exercises logged: '+blocks.length,
   'Sets logged: '+setCount,
