@@ -1335,7 +1335,7 @@ function moneyRecentActivityPanel(){
   '<h3>'+(editing?'Edit activity':'Add activity')+'</h3>'+
   '<p class="tiny">This updates envelope balances. Changes cannot leave an envelope overdrawn.</p>'+
   '<div class="field"><label for="moneyActivityType">Activity</label><select id="moneyActivityType" name="type">'+
-  [['add','Add money'],['spend','Spend'],['move','Move money']].map(([key,label])=>'<option value="'+key+'"'+(key===type?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
+  [['add','Add money'],['spend','Spend'],['move','Move money']].map(([key,label])=>'<option value="'+key+'"'+(key===type?' selected':'')+(key==='move'&&envelopes.length<2?' disabled':'')+'>'+label+'</option>').join('')+'</select></div>'+
   '<div class="field"><label for="moneyActivityEnvelope">Envelope</label><select id="moneyActivityEnvelope" name="envelopeId">'+envelopes.map(x=>
   '<option value="'+h(x.id)+'"'+(x.id===mainId?' selected':'')+'>'+h(x.name)+' · '+moneyText(moneyBalance(x))+'</option>').join('')+'</select></div>'+
   '<div class="field" id="moneyActivityDestinationField"'+(type==='move'?'':' style="display:none"')+'><label for="moneyActivityDestination">Move to</label><select id="moneyActivityDestination" name="destinationId">'+envelopes.map(x=>
@@ -2040,8 +2040,8 @@ document.addEventListener('submit',ev=>{
   const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),
    kind=String(fd.get('kind')||'spend'),rawGoal=String(fd.get('goal')||'').trim(),
    rawStarting=String(fd.get('startingAmount')||'').trim();
-  const goalCents=rawGoal&&rawGoal!=='0'&&rawGoal!=='0.00'?moneyAmount(rawGoal):0;
-  const startingCents=rawStarting&&rawStarting!=='0'&&rawStarting!=='0.00'?moneyAmount(rawStarting):0;
+  const goalCents=!rawGoal||Number(rawGoal)===0?0:moneyAmount(rawGoal);
+  const startingCents=!rawStarting||Number(rawStarting)===0?0:moneyAmount(rawStarting);
   if(!name||name.length>64||!['spend','save'].includes(kind)||goalCents===null||startingCents===null){
    alert('Enter a name, choose a purpose, and use a valid goal and starting amount.');return
   }
