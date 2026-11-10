@@ -1258,6 +1258,44 @@ function moneyText(cents){return (Number(cents||0)/100).toLocaleString('en-US',{
 function moneyGoal(env){
  return Number.isSafeInteger(env?.goalCents)&&env.goalCents>0?env.goalCents:0;
 }
+/* Apply new, edited, and deleted money activity atomically using integer cents. */
+function moneyTransactionEffects(tx){
+ if(!tx)return new Map();
+ const amount=tx.amountCents;
+ if(!Number.isSafeInteger(amount)||amount<=0)return null;
+ const effects=new Map();
+ const add=(id,delta)=>{if(!id)return false;effects.set(id,(effects.get(id)||0)+delta);return true};
+ if(tx.type==='add'){if(!add(tx.toId,amount))return null}
+ else if(tx.type==='spend'){if(!add(tx.fromId,-amount))return null}
+ else if(tx.type==='move'){if(!tx.fromId||!tx.toId||tx.fromId===tx.toId)return null;add(tx.fromId,-amount);add(tx.toId,amount)}
+ else return null;
+ return effects;
+}
+function moneyCommitTransaction(next,original=null){
+ const current=state.moneyEnvelopes,oldEffects=moneyTransactionEffects(original),newEffects=moneyTransactionEffects(next);
+ if(!oldEffects||!newEffects)return {error:'This activity has invalid transaction details.'};
+ const balances=new Map(current.map(x=>[x.id,moneyBalance(x)]));
+ for(const [id,delta] of oldEffects){
+  if(!balances.has(id))return {error:'An envelope used by this activity no longer exists, so its balance cannot be adjusted.'};
+  balances.set(id,balances.get(id)-delta);
+ }
+ for(const [id,delta] of newEffects){
+  if(!balances.has(id))return {error:'Choose an existing envelope for this activity.'};
+  balances.set(id,balances.get(id)+delta);
+ }
+ for(const env of current){
+  const balance=balances.get(env.id);
+  if(!Number.isSafeInteger(balance)||balance<0)return {error:'This change would leave '+env.name+' with a negative or invalid balance. Adjust later spending or transfers first.'};
+ }
+ const from=next?.fromId?current.find(x=>x.id===next.fromId):null,to=next?.toId?current.find(x=>x.id===next.toId):null;
+ for(const env of current)env.amountCents=balances.get(env.id);
+ if(original&&!next){state.moneyHistory=state.moneyHistory.filter(x=>x.id!==original.id);return {deleted:true}}
+ const tx={id:original?.id||uid(),type:next.type,amountCents:next.amountCents,at:original?.at||new Date().toISOString(),note:next.note||'',
+  fromId:next.fromId||null,fromName:from?.name||'',toId:next.toId||null,toName:to?.name||''};
+ if(original)Object.assign(original,tx);
+ else state.moneyHistory.push(tx);
+ return {tx};
+}
 function moneyEnvelopesPanel(){
  const envelopes=state.moneyEnvelopes;
  const total=envelopes.reduce((sum,x)=>sum+moneyBalance(x),0);
@@ -1312,6 +1350,8 @@ function moneyEnvelopesPanel(){
     '<div class="field"><label for="moneyName">Envelope name</label><input type="text" name="name" id="moneyName" maxlength="64" placeholder="Dining out, Christmas…" value="'+h(edit?.name||'')+'" required></div>'+
     '<div class="field"><label for="moneyKind">Purpose</label><select id="moneyKind" name="kind"><option value="spend" '+((edit?.kind||'spend')==='spend'?'selected':'')+'>Ready to enjoy</option><option value="save" '+(edit?.kind==='save'?'selected':'')+'>Building up</option></select></div>'+
     '<div class="field"><label for="moneyGoal">Goal ($, optional)</label><input id="moneyGoal" type="number" name="goal" step="0.01" min="0" placeholder="No goal required" value="'+(moneyGoal(edit)?(moneyGoal(edit)/100).toFixed(2):'')+'"></div>'+
+
+    (!edit?'<div class="field"><label for="moneyStartingAmount">Starting amount ($, optional)</label><input id="moneyStartingAmount" type="number" name="startingAmount" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><small class="tiny">Money already set aside for this envelope. Leave blank if you’re starting at $0.</small></div>':'')+
     '<div class="buttonrow"><button class="btn primary" type="submit">'+(edit?'Save envelope':'Create envelope')+'</button>'+
     '<button type="button" class="btn" data-money-new="1">Cancel</button>'+
     (edit?'<button type="button" class="btn danger" data-money-delete="'+h(edit.id)+'" '+(moneyBalance(edit)>0?'disabled title="Move or spend the balance before deleting"':'')+'>Delete envelope</button>':'')+'</div></form>':'')+
@@ -1853,51 +1893,45 @@ document.addEventListener('submit',ev=>{
  if(ev.target.id==='moneyEnvelopeForm'){
   ev.preventDefault();
   const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),
-    kind=String(fd.get('kind')||'spend'),rawGoal=String(fd.get('goal')||'').trim();
+   kind=String(fd.get('kind')||'spend'),rawGoal=String(fd.get('goal')||'').trim(),
+   rawStarting=String(fd.get('startingAmount')||'').trim();
   const goalCents=rawGoal&&rawGoal!=='0'&&rawGoal!=='0.00'?moneyAmount(rawGoal):0;
-  if(!name||name.length>64||!['spend','save'].includes(kind)||goalCents===null){
-   alert('Enter a name, choose a purpose, and use a valid positive goal or leave it blank.');return
+  const startingCents=rawStarting&&rawStarting!=='0'&&rawStarting!=='0.00'?moneyAmount(rawStarting):0;
+  if(!name||name.length>64||!['spend','save'].includes(kind)||goalCents===null||startingCents===null){
+   alert('Enter a name, choose a purpose, and use a valid goal and starting amount.');return
   }
   const existing=state.moneyEnvelopes.find(x=>x.id===ui.moneyEditId);
   if(!existing&&state.moneyEnvelopes.length>=40){alert('The wallet supports up to 40 envelopes.');return}
   const data={name,kind,goalCents};
   if(existing)Object.assign(existing,data);
-  else state.moneyEnvelopes.push({id:uid(),...data,amountCents:0,createdAt:new Date().toISOString()});
-  ui.moneyMessage=(existing?'Updated ':'Created ')+name+'. Add money only when you have it available.';
+  else{
+   const envelope={id:uid(),...data,amountCents:0,createdAt:new Date().toISOString()};
+   state.moneyEnvelopes.push(envelope);
+   if(startingCents){
+    const outcome=moneyCommitTransaction({type:'add',amountCents:startingCents,toId:envelope.id,note:'Starting amount'});
+    if(outcome.error){state.moneyEnvelopes.pop();alert(outcome.error);return}
+   }
+   ui.moneySelectedId=envelope.id;
+  }
+  ui.moneyMessage=existing?'Updated '+name+'.':startingCents?'Created '+name+' with '+moneyText(startingCents)+' available.':'Created '+name+'. Add money whenever you have it available.';
   ui.moneyEditId=null;ui.moneyNew=false;ui.moneyOpen=true;ui.moneyAction=null;
   save();render();return
  }
  if(ev.target.id==='moneyActionForm'){
   ev.preventDefault();
   const {type,id}=ui.moneyAction||{},from=state.moneyEnvelopes.find(x=>x.id===id),
-   fd=new FormData(ev.target),amount=moneyAmount(fd.get('amount')),
+   fd=new FormData(ev.target),amountCents=moneyAmount(fd.get('amount')),
    note=String(fd.get('note')||'').trim(),toId=String(fd.get('toId')||'');
-  if(!from||!['add','spend','move'].includes(type)||amount===null||note.length>140){
-   alert('Enter a valid amount greater than zero and a short optional note.');return
+  if(!from||!['add','spend','move'].includes(type)||amountCents===null||note.length>140){
+   alert('Enter an amount greater than zero and a short optional note.');return
   }
-  const current=moneyBalance(from);
-  if(type!=='add'&&amount>current){
-   alert('Not enough money in '+from.name+'. Available: '+moneyText(current)+'.');return
-  }
-  const destination=type==='move'?state.moneyEnvelopes.find(x=>x.id===toId&&x.id!==id):null;
-  if(type==='move'&&!destination){alert('Choose a different envelope to move money to.');return}
-  if(type==='add'&&(!Number.isSafeInteger(current+amount))) {
-   alert('The envelope balance would be too large.');return
-  }
-  if(destination&&!Number.isSafeInteger(moneyBalance(destination)+amount)){
-   alert('The receiving envelope balance would be too large.');return
-  }
-  if(type==='add')from.amountCents=current+amount;
-  else from.amountCents=current-amount;
-  if(destination)destination.amountCents=moneyBalance(destination)+amount;
-  const transaction={id:uid(),type,amountCents:amount,at:new Date().toISOString(),note,
-    fromId:type==='add'?null:id,fromName:type==='add'?'':from.name,
-    toId:type==='add'?id:destination?.id||null,
-    toName:type==='add'?from.name:destination?.name||''};
-  state.moneyHistory.push(transaction);
-  ui.moneyMessage=type==='add'?moneyText(amount)+' assigned to '+from.name+'.':
-    type==='spend'?moneyText(amount)+' spent from '+from.name+'.':
-      moneyText(amount)+' moved to '+destination.name+'.';
+  if(type==='move'&&!state.moneyEnvelopes.some(x=>x.id===toId&&x.id!==id)){alert('Choose a different envelope to move money to.');return}
+  const tx={type,amountCents,note,fromId:type==='add'?null:id,toId:type==='add'?id:type==='move'?toId:null};
+  const outcome=moneyCommitTransaction(tx);
+  if(outcome.error){alert(outcome.error);return}
+  ui.moneyMessage=type==='add'?moneyText(amountCents)+' assigned to '+from.name+'.':
+   type==='spend'?moneyText(amountCents)+' spent from '+from.name+'.':
+    moneyText(amountCents)+' moved to '+outcome.tx.toName+'.';
   ui.moneyAction=null;ui.moneyOpen=true;save();render();return
  }
  if(ev.target.id==='dinnerForm'){
