@@ -530,6 +530,22 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .rest-controls .btn{min-height:37px;padding:7px 10px;font-weight:750}
 .rest-preset:focus-visible{outline:3px solid #80bbad;outline-offset:2px}
 @media(max-width:410px){.rest-timer-card{padding:10px;top:5px}.rest-timer-heading{font-size:14px}.rest-timer-readout strong{font-size:26px}.rest-timer-status{font-size:10px}.rest-timer-actions{gap:6px}.rest-preset{min-width:46px;padding:5px 7px}.rest-controls .btn{padding:6px 9px}}
+
+/* Closing a finished session keeps the summary and edit controls, not the set editor. */
+.completed-workout-card{display:grid;gap:12px;align-content:start}
+.completed-workout-heading{display:grid;justify-items:start;gap:8px}
+.completed-workout-heading h2{margin:0;font-size:21px}
+.completed-workout-heading p{margin:0;font-size:13px}
+.completed-workout-stats{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:#246e67;font-size:13px}
+.completed-workout-card>.tiny{margin:0}
+.completed-workout-actions{margin:1px 0 0;gap:8px}
+.completed-workout-actions .btn{min-height:43px}
+#workoutCopyStatus{margin:0;color:#276e68;font-weight:700}
+#workoutCopyStatus:empty{display:none}
+.workout-summary-preview{border-top:1px solid var(--line);padding-top:11px}
+.workout-summary-preview summary{cursor:pointer;font-size:13px;font-weight:750;color:#2c706e}
+.workout-summary-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto;padding:13px;margin:12px 0 0;background:#f6faf9;border:1px solid #e2e9e6;border-radius:10px;color:var(--ink);font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;user-select:text;-webkit-user-select:text}
+@media(max-width:420px){.completed-workout-actions{display:grid}.completed-workout-actions .btn{width:100%}}
 </style>
 </head>
 <body>
@@ -665,7 +681,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:''};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1585,6 +1601,81 @@ function updateRestTimerDisplay(){
  const toggle=document.getElementById('restTimerToggle');
  if(toggle)toggle.textContent=restAction(left);
 }
+/* Use actual saved sets, not planned reps, for AI-ready text. Do not create
+   additional history or duplicate the workout data. */
+function workoutSummaryInfo(session){
+ const routine=sessionRoutine(session),cycle=state.cycles.find(c=>c.id===session.cycleId)||activeCycle(),
+  cycleIndex=state.cycles.findIndex(c=>c.id===cycle.id),plan=planFor(routine,session.venue||'home'),
+  cycleLabel=(PROGRAM_OPTIONS[cycle.program]||PROGRAM_OPTIONS.foundation).label;
+ const ordered=[...new Set([...plan.ids,...Object.keys(session.sets||{})])],blocks=[];
+ let setCount=0;
+ for(const id of ordered){
+  const entries=Array.isArray(session.sets?.[id])?session.sets[id]:[];
+  const exercise=EX[id],lines=[];
+  entries.forEach((record,i)=>{
+   if(!record||!(Number(record.reps)>0))return;
+   const weightValue=String(record.weight??'').trim();
+   const hasWeight=weightValue!==''&&Number.isFinite(Number(weightValue))&&Number(weightValue)>0;
+   const weight=hasWeight?weightValue+' '+(state.settings.weightUnit||'lb'):
+    exercise?.track==='body'?'bodyweight':'';
+   const repUnit=exercise?.style==='time'?'seconds':exercise?.perSide?'reps per side':'reps';
+   const rirValue=String(record.rir??'').trim();
+   const rir=rirValue!==''&&Number.isFinite(Number(rirValue))?
+    ' · '+(Number(rirValue)>=5?'5+':rirValue)+' reps in reserve':'';
+   lines.push('  Set '+(i+1)+': '+(weight?weight+' × ':'')+String(record.reps)+' '+repUnit+rir);
+   setCount++;
+  });
+  if(lines.length)blocks.push((exercise?.name||id)+'\n'+lines.join('\n'));
+ }
+ const date=validCalendarDate(session.date)?session.date:scheduledDate(session.week||ui.week,session.day||ui.day);
+ const lines=[
+  'Stronger 12 — Strength Workout Summary',
+  'Date: '+formatDate(date,{year:'numeric',month:'short',day:'numeric',weekday:'long'}),
+  'Status: '+(session.completed?'Completed':'In progress'),
+  'Program: '+cycleLabel,
+  'Cycle: '+(cycleIndex>=0?cycleIndex+1:1)+' · Week '+(session.week||ui.week),
+  'Workout: '+routineName(routine)+' — '+plan.title,
+  'Location: '+((session.venue||'home')==='gym'?'Gym':'Home'),
+  'Exercises logged: '+blocks.length,
+  'Sets logged: '+setCount,
+  '',
+  blocks.length?blocks.join('\n\n'):'No completed sets logged.'
+ ];
+ const notes=String(session.notes||'').trim();
+ if(notes)lines.push('','Workout notes: '+notes);
+ return {text:lines.join('\n'),exerciseCount:blocks.length,setCount};
+}
+function completedWorkoutCard(session,plan){
+ const info=workoutSummaryInfo(session);
+ return '<section class="card span8 completed-workout-card" id="completedWorkoutCard">'+
+ '<div class="completed-workout-heading"><span class="badgecomplete">✓ Workout completed</span>'+
+ '<h2>'+h(formatDate(session.date||scheduledDate(ui.week,ui.day),{weekday:'long',month:'short',day:'numeric'}))+'</h2>'+
+ '<p>'+h(plan.title)+' · '+h((session.venue||'home')==='gym'?'Gym':'Home')+'</p></div>'+
+ '<div class="completed-workout-stats"><strong>'+info.exerciseCount+' '+(info.exerciseCount===1?'exercise':'exercises')+'</strong>'+
+ '<span aria-hidden="true">·</span><strong>'+info.setCount+' '+(info.setCount===1?'set':'sets')+' logged</strong></div>'+
+ '<p class="tiny">Your full workout is saved and closed. Copy the details to paste into another AI, or reopen it to make changes.</p>'+
+ '<div class="buttonrow completed-workout-actions">'+
+ '<button type="button" class="btn primary" data-workout-copy="1">Copy workout summary</button>'+
+ '<button type="button" class="btn" data-workout-edit="1">Edit workout</button></div>'+
+ '<p id="workoutCopyStatus" class="tiny" role="status" aria-live="polite"></p>'+
+ '<details class="workout-summary-preview"><summary>Preview summary</summary><pre>'+h(info.text)+'</pre></details>'+
+ '</section>';
+}
+async function copyWorkoutSummaryText(text){
+ const setStatus=msg=>{const node=document.getElementById('workoutCopyStatus');if(node)node.textContent=msg};
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+  else{
+   const field=document.createElement('textarea');
+   field.value=text;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';
+   document.body.appendChild(field);field.focus();field.select();
+   let success=false;
+   try{success=!!document.execCommand?.('copy')}finally{field.remove()}
+   if(!success)throw new Error('Clipboard unavailable');
+  }
+  setStatus('Copied. Paste into another AI whenever you are ready.');
+ }catch(error){setStatus('Could not copy automatically. Open Preview summary and select the text to copy.')}
+}
 function lift(){
  const w=ui.week,d=ui.day,mode=workoutMode(w,d),ph=phase(w),head=header('Workout.','Pick a day and activity. Move your strength sessions around without losing the 12-week plan.')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
  if(mode==='yoga')return head+yogaWorkoutCard()+
@@ -1592,7 +1683,8 @@ function lift(){
  '<p>Log yoga here on any day you go. Select the actual class date and duration in the form.</p>'+
  '<div class="notice">Your yoga history is independent of the 12-week strength cycles. Any saved strength workout for this day is preserved.</div><div class="divider"></div><h3>Your weekly rhythm</h3>'+weeklyCalendar()+'</section></div>';
  const session=getSession(w,d),routine=sessionRoutine(session),plan=planFor(routine,mode),c=activeCycle();
- return head+'<section class="card span8"><div class="session-header"><div><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+' · Cycle '+(activeCycleIndex()+1)+' · Week '+w+'</span>'+
+ if(session.completed&&ui.openCompletedWorkoutKey!==key(w,d))return head+completedWorkoutCard(session,plan)+'</div>';
+ return head+'<section class="card span8" id="workoutSessionCard"><div class="session-header"><div><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+' · Cycle '+(activeCycleIndex()+1)+' · Week '+w+'</span>'+
  '<h2 style="margin:12px 0 4px">'+h(formatDate(scheduledDate(w,d),{weekday:'long'}))+' — '+h(plan.title)+'</h2><p class="helper">'+h(plan.description)+' · 5-minute warm-up + 5 movements × 3 sets</p></div>'+
  (session.completed?'<span class="badgecomplete">✓ Completed</span>':'')+'</div>'+
  '<div class="field" style="margin:15px 0"><label for="routinePick">Which strength routine?</label>'+
@@ -1605,8 +1697,8 @@ function lift(){
  restTimerCard()+
  plan.ids.map((id,i)=>exerciseCard(id,i,session,w)).join('')+
  '<div class="field" style="margin-top:20px"><label for="sessionNotes">Notes</label><textarea id="sessionNotes" rows="3" placeholder="How did it feel?">'+h(session.notes||'')+'</textarea></div>'+
- '<div class="buttonrow" style="margin-top:15px"><button class="btn primary" data-complete="1">'+(session.completed?'✓ Update session':'✓ Finish & save session')+'</button>'+
- (session.completed?'<button class="btn" data-reopen="1">Reopen session</button>':'')+'</div><p class="tiny">Your sets save automatically. Partial sessions are fine.</p></section>'+
+ '<div class="buttonrow" style="margin-top:15px"><button class="btn primary" data-complete="1">'+(session.completed?'✓ Save & close':'✓ Finish & save session')+'</button>'+
+ (session.completed?'<button class="btn" data-reopen="1">Mark incomplete</button>':'')+'</div><p class="tiny">Your sets save automatically. Partial sessions are fine.</p></section>'+
  '<section class="card span4"><h2>About this plan</h2><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+'</span>'+
  '<p class="fineprint" style="margin-top:12px">'+h(ph.desc)+' <strong>Target: about '+h(ph.rir)+' reps left.</strong></p>'+
  '<div class="notice">'+h((PROGRAM_OPTIONS[c.program]||PROGRAM_OPTIONS.foundation).description)+'</div>'+
@@ -1658,6 +1750,18 @@ if(b.dataset.restReset){
  restTimer.running=false;restTimer.remaining=restTimer.duration;
  restTimer.endsAt=0;restTimer.complete=false;render();return
 }
+if(b.dataset.workoutCopy){
+ const session=state.workouts[key(ui.week,ui.day)];
+ if(session?.completed)copyWorkoutSummaryText(workoutSummaryInfo(session).text);
+ return
+}
+if(b.dataset.workoutEdit){
+ const session=state.workouts[key(ui.week,ui.day)];
+ if(!session?.completed)return;
+ ui.openCompletedWorkoutKey=key(ui.week,ui.day);
+ render();document.getElementById('workoutSessionCard')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+ return
+}
 const mode=b.dataset.workoutMode;
 if(mode){
  if(!['home','gym','yoga'].includes(mode))return;
@@ -1677,7 +1781,21 @@ if(mode){
  }
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
-}const tab=b.dataset.tab;if(tab){ui.tab=tab;if(tab==='lift')ui.week=currentWeek();render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));render();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}if(b.dataset.complete){const s=ensureSession(ui.week,ui.day),any=Object.values(s.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}s.completed=true;s.completedAt=new Date().toISOString();save();render();return}if(b.dataset.reopen){ensureSession(ui.week,ui.day).completed=false;save();render();return}if(b.dataset.addPreset!==undefined){const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber});save();render();return}if(b.dataset.deleteFood){state.foods=state.foods.filter(f=>f.id!==b.dataset.deleteFood);save();render();return}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
+}const tab=b.dataset.tab;if(tab){ui.tab=tab;if(tab==='lift')ui.week=currentWeek();render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));render();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}if(b.dataset.complete){
+ const session=ensureSession(ui.week,ui.day);
+ const any=Object.values(session.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));
+ if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}
+ if(!session.completed)session.completedAt=new Date().toISOString();
+ session.completed=true;ui.openCompletedWorkoutKey=null;
+ restTimer.running=false;restTimer.complete=false;restTimer.remaining=restTimer.duration;restTimer.endsAt=0;
+ save();render();
+ document.getElementById('completedWorkoutCard')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+}
+if(b.dataset.reopen){
+ ensureSession(ui.week,ui.day).completed=false;
+ ui.openCompletedWorkoutKey=null;
+ save();render();return
+}if(b.dataset.addPreset!==undefined){const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber});save();render();return}if(b.dataset.deleteFood){state.foods=state.foods.filter(f=>f.id!==b.dataset.deleteFood);save();render();return}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
  ui.tab='tasks';ui.plannerForm=null;ui.editTaskId=null;ui.importantOpen=false;ui.importantMonth=TODAY.slice(0,7);ui.importantDate=TODAY;render();
  document.getElementById('importantDatesSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
