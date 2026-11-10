@@ -2314,7 +2314,7 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
  const notice=document.getElementById('appUpdateNotice');
  const isEditing=()=>{
   const active=document.activeElement;
-  return appFormTouched||!!(active?.closest?.('#appView form'))||
+  return (ui.tab==='lift'&&restTimer.running)||appFormTouched||!!(active?.closest?.('#appView form'))||
    !!((ui.tab==='tasks'&&(ui.plannerForm||ui.importantOpen||ui.editTaskId||ui.editBirthdayId||ui.editImportantId))||
     (ui.tab==='life'&&(ui.editDinnerId||ui.editGroceryId||ui.moneyNew||ui.moneyEditId||ui.moneyAction))||
     (ui.tab==='lift'&&ui.editYogaId));
