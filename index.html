@@ -1334,7 +1334,6 @@ function importantDatesPanel(){
  const days=Array.from({length:daysBetween(gridStart,gridEnd)+1},(_,i)=>addDays(gridStart,i));
  const occurrences=importantOccurrences(gridStart,daysBetween(gridStart,gridEnd));
  const onDate=date=>occurrences.filter(e=>e.start<=date&&e.end>=date);
- const entries=onDate(chosen),dayTasks=plannerTasksForDate(chosen);
  const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||chosen;
  const eventRepeat=Object.hasOwn(EVENT_REPEATS,event?.repeat)?event.repeat:'none';
  const selectedWeekDays=event?eventWeeklyDays(event):[dateOf(chosenFormDate).getDay()];
@@ -1342,7 +1341,6 @@ function importantDatesPanel(){
  const showOnlyOnDay=event?event.showOnlyOnDay===true:type==='fitness';
  if(ui.plannerAgendaAnchor!==chosen){ui.plannerAgendaAnchor=chosen;ui.plannerAgendaCount=14;ui.plannerResetScroll=true}
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
- const expanded=true;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
  const calendar='<div class="important-calendar" aria-label="Planner calendar">'+
   '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(formatDate(first,{month:'long',year:'numeric'}))+'</h3>'+
@@ -1364,28 +1362,6 @@ function importantDatesPanel(){
       (items.length+plannedTasks.length>1?'<span class="important-calendar-count">'+(items.length+plannedTasks.length)+'</span>':'')+'</span>'+
     '</button>';
   }).join('')+'</div></div>';
- const eventRows=entries.map(e=>{
-  const itemType=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other,revealed=ui.selectedImportantId===e.id;
-  const span=e.end>e.start?' · '+formatDate(e.start,{month:'short',day:'numeric'})+'–'+formatDate(e.end,{month:'short',day:'numeric'}):'';
-  const age=e.type==='birthday'&&e.age!==null&&e.age>=0?' · Turning '+e.age:'';
-  const time=e.time?' · '+h(eventTimeDisplay(e.time)||e.time):'';
-  const summary=itemType.label+time+age+span+(e.original?.repeat&&e.original.repeat!=='none'?' · '+eventRepeatText(e.original):'');
-  return '<div class="task-swipe event-swipe'+(revealed?' is-revealed':'')+'" data-event-swipe="'+h(e.id)+'">'+
-   '<div class="task-swipe-actions">'+
-   '<button type="button" class="task-edit-reveal" data-important-edit="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(e.title)+'">Edit</button>'+
-   '<button type="button" class="task-delete-reveal" data-important-delete="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Delete '+h(e.title)+'">Delete</button></div>'+
-   '<div class="event-row">'+
-   '<span class="important-date-emoji" aria-hidden="true">'+itemType.emoji+'</span>'+
-   '<div class="important-date-copy"><strong>'+h(e.title)+'</strong><span class="tiny">'+h(summary)+'</span>'+
-   (e.notes?'<span class="tiny event-inline-note">'+h(e.notes)+'</span>':'')+'</div>'+
-   '<button type="button" class="task-more" data-important-reveal="'+h(e.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(e.title)+'" title="Swipe left or tap to show Edit and Delete">···</button>'+
-   '</div></div>';
- });
- const agendaItems=[
-  ...entries.map((e,i)=>({order:e.time?'0'+e.time:'1'+String(e.title||'').toLowerCase(),html:eventRows[i]})),
-  ...dayTasks.map((t,i)=>({order:'2'+String(i).padStart(4,'0'),html:taskItem(t,false,chosen)}))
- ].sort((a,b)=>a.order.localeCompare(b.order));
- const agenda=agendaItems.map(x=>x.html).join('');
  const form=editing||ui.importantOpen||ui.plannerForm==='event'?
   '<div class="important-calendar-form" id="importantDatesDetails">'+
   '<h3>'+(editing?(event?.repeat&&event.repeat!=='none'?'Edit repeating event':'Edit event'):'Add event or birthday')+'</h3>'+
@@ -2041,8 +2017,10 @@ let appFormTouched=false;
 let plannerAgendaObserver=null;
 function render(){
  const oldMonth=document.querySelector?.('.planner-month-details');
+ const oldPlanner=document.getElementById('plannerAgendaSentinel');
+ const oldAnchor=ui.plannerAgendaAnchor;
  const monthWasOpen=ui.tab==='tasks'&&!!oldMonth?.open;
- const scrollTop=ui.tab==='tasks'&&!ui.plannerResetScroll&&Number.isFinite(window.scrollY)?window.scrollY:null;
+ const scrollTop=ui.tab==='tasks'&&oldPlanner&&!ui.plannerResetScroll&&Number.isFinite(window.scrollY)?window.scrollY:null;
  plannerAgendaObserver?.disconnect?.();
  appFormTouched=false;renderNav();
  document.getElementById('appView').innerHTML=taskUndoBanner()+({home:dashboard,tasks:tasksPage,lift,food,life:lifePage,settings}[ui.tab]||dashboard)();
@@ -2056,7 +2034,7 @@ function render(){
    },{rootMargin:'400px 0px',threshold:0});
    plannerAgendaObserver.observe(sentinel);
   }
-  if(scrollTop!==null&&scrollTop>0)window.scrollTo(0,scrollTop);
+  if(scrollTop!==null&&scrollTop>0&&oldAnchor===ui.plannerAgendaAnchor&&!ui.plannerResetScroll)window.scrollTo(0,scrollTop);
  }
  ui.plannerResetScroll=false;
  const tag=document.getElementById('savedStatus');
