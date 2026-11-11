@@ -1376,7 +1376,11 @@ function importantDatesPanel(){
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
  const visibleLabel=ui.plannerMonthExpanded?
   formatDate(first,{month:'long',year:'numeric'}):
-  formatDate(weekStart,{month:'short',day:'numeric'})+'–'+formatDate(weekEnd,{day:'numeric',month:weekStart.slice(0,7)===weekEnd.slice(0,7)?undefined:'short',year:'numeric'});
+  weekStart.slice(0,4)!==weekEnd.slice(0,4)?
+   formatDate(weekStart,{month:'short',day:'numeric',year:'numeric'})+' – '+formatDate(weekEnd,{month:'short',day:'numeric',year:'numeric'}):
+   formatDate(weekStart,{month:'short',day:'numeric'})+'–'+
+    (weekStart.slice(0,7)===weekEnd.slice(0,7)?String(Number(weekEnd.slice(8,10))):
+     formatDate(weekEnd,{month:'short',day:'numeric'}))+', '+weekEnd.slice(0,4);
  const calendar='<div class="important-calendar planner-fixed-calendar" aria-label="Planner '+(ui.plannerMonthExpanded?'month':'week')+' calendar">'+
   '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(visibleLabel)+'</h3>'+
   '<div class="important-calendar-controls">'+
