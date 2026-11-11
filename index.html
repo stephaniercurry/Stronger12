@@ -483,14 +483,38 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 /* Planner event editing: date controls never exceed the form, and time uses the entire row. */
 #importantDateForm input:not([type="checkbox"]):not([type="radio"]),
 #importantDateForm select{height:46px;min-height:46px;max-height:46px;box-sizing:border-box}
-.planner-event-dates-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:100%;min-width:0}
-.planner-event-dates-row>.field{min-width:0;max-width:100%;overflow:hidden}
-#importantDateForm .planner-event-dates-row input[type="date"]{display:block;box-sizing:border-box;min-width:0;width:100%;max-width:100%;overflow:hidden;padding:6px 4px;font-size:16px;text-align:center}
-#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-date-and-time-value{min-width:0;text-align:center}
-.planner-event-time-row{grid-template-columns:minmax(0,1fr);min-width:0}
+/* One date per row: full-width native iOS date pickers no longer collide or clip. */
+#importantDatesDetails,#plannerTaskEditor,
+#importantDateForm,#taskForm{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+#importantDateForm .planner-event-dates-row,
+#taskForm .planner-task-details-row{
+ display:grid;grid-template-columns:minmax(0,1fr);gap:12px;
+ width:100%;min-width:0;max-width:100%
+}
+#importantDateForm .planner-event-dates-row>.field,
+#taskForm .planner-task-details-row>.field{
+ width:100%;min-width:0;max-width:100%;overflow:visible
+}
+#importantDateForm .planner-event-dates-row input[type="date"],
+#taskForm .planner-task-details-row input[type="date"]{
+ display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;
+ height:46px;min-height:46px;max-height:46px;
+ padding:8px 12px;font-size:16px;text-align:left
+}
+#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-date-and-time-value,
+#taskForm .planner-task-details-row input[type="date"]::-webkit-date-and-time-value{
+ min-width:0;text-align:left
+}
+#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-datetime-edit,
+#taskForm .planner-task-details-row input[type="date"]::-webkit-datetime-edit{
+ min-width:0;max-width:100%;padding:0
+}
+#importantDateForm .planner-entry-kind select,
+#taskForm .planner-entry-kind select{width:100%;max-width:100%}
+#taskForm .planner-task-details-row select{width:100%;max-width:100%;height:46px}
+.planner-event-time-row{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
 .planner-event-time-row>.field{min-width:0;width:100%;max-width:100%}
 .planner-event-time-row .event-clock-picker{width:100%;max-width:100%}
-@media(max-width:600px){.planner-event-dates-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 @media(max-width:430px){.event-clock-picker{gap:8px}.event-clock-picker select{padding:10px 5px}}
 
 /* App update banner: shown only when refreshing could interrupt editing. */
@@ -992,7 +1016,7 @@ function plannerTaskForm(){
  '<form id="taskForm" class="stack" style="margin-top:14px">'+
  (edit?'':plannerEventTypeSelector('todo'))+
  '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
- '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.plannerEntryDraft?.date||ui.importantDate)+'"></div>'+
+ '<div class="inlinefields planner-task-details-row"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.plannerEntryDraft?.date||ui.importantDate)+'"></div>'+
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
  '<div class="field"><label for="taskRepeat">Repeat</label><select id="taskRepeat" name="repeat">'+Object.entries(TASK_REPEATS).map(([value,label])=>'<option value="'+value+'" '+((edit?.repeat||'none')===value?'selected':'')+'>'+h(label)+'</option>').join('')+'</select></div>'+
  '<div class="field task-interval-field" id="taskIntervalField" '+((edit?.repeat||'none')==='interval'?'':'style="display:none"')+'><label for="taskIntervalDays">Repeat every how many days?</label><input id="taskIntervalDays" name="repeatDays" type="number" inputmode="numeric" min="1" max="365" step="1" value="'+h(edit?.repeatDays||3)+'" '+((edit?.repeat||'none')==='interval'?'required':'')+'><small class="tiny">Starts on the due date, then repeats every N calendar days.</small></div>'+
