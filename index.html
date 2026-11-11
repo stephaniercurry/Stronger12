@@ -476,11 +476,19 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .event-today-only-label small{font-size:12px;line-height:1.45;color:var(--muted)}
 
 /* AM/PM time entry without relying on browser or system 24-hour preferences. */
-.event-clock-picker{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.85fr) minmax(0,1fr);gap:7px;align-items:end}
+.event-clock-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:end}
 .event-clock-picker .field{min-width:0;gap:5px}
 .event-clock-picker select{width:100%;min-width:0;padding:10px 7px;font-size:16px}
 #importantTimeField .field-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}
-@media(max-width:430px){.event-clock-picker{gap:5px}.event-clock-picker select{padding:10px 5px}}
+/* Planner event editing: date controls never exceed the form, and time uses the entire row. */
+.planner-event-dates-row{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%;min-width:0}
+.planner-event-dates-row>.field{min-width:0;max-width:100%}
+.planner-event-dates-row input[type="date"]{display:block;box-sizing:border-box;min-width:0;width:100%;max-width:100%;padding:10px 8px;font-size:16px}
+.planner-event-time-row{grid-template-columns:minmax(0,1fr);min-width:0}
+.planner-event-time-row>.field{min-width:0;width:100%;max-width:100%}
+.planner-event-time-row .event-clock-picker{width:100%;max-width:100%}
+@media(max-width:600px){.planner-event-dates-row{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:430px){.event-clock-picker{gap:8px}.event-clock-picker select{padding:10px 5px}}
 
 /* App update banner: shown only when refreshing could interrupt editing. */
 .app-update-notice{position:sticky;top:9px;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;margin-bottom:14px;border:1px solid #b5dcd8;background:#e9f5f2;border-radius:13px;box-shadow:0 5px 20px rgba(25,71,73,.12);color:var(--ink);font-size:13px}
@@ -1425,9 +1433,9 @@ function importantDatesPanel(){
   '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
   '<div class="field planner-entry-kind"><label for="importantType">Event type</label><select name="type" id="importantType">'+plannerEventTypeOptions(type,!editing)+'</select></div>'+
   '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
-  '<div class="inlinefields"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
+  '<div class="inlinefields planner-event-dates-row"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
   '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
-  '<div class="inlinefields"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><span class="field-label">Time (optional)</span>'+eventTimePicker(event?.time||'')+'</div>'+
+  '<div class="inlinefields planner-event-time-row"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><span class="field-label">Time (optional)</span>'+eventTimePicker(event?.time||'')+'</div>'+
   '<div class="field" id="importantRelationField"'+(type!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
   '<div class="field" id="importantBirthYearField"'+(type!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Birthdays repeat each year, even without a birth year.</span></div>'+
   '<div class="field" id="importantRepeatField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantRepeat">Repeat</label><select name="repeat" id="importantRepeat">'+Object.entries(EVENT_REPEATS).map(([key,label])=>'<option value="'+key+'" '+(eventRepeat===key?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
