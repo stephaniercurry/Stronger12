@@ -916,7 +916,7 @@ function homeTasksForDate(date){
 }
 function taskSummary(date=TODAY){
  const all=homeTasksForDate(date),done=all.filter(t=>taskDone(t,date)).length;
- return '<section class="card span12 today-tasks-card"><div class="row spread wrap"><div><div class="kicker">MY DAY · '+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</div><h2 style="margin:7px 0 3px">'+(date===TODAY?'What matters today':'Tasks for this day')+'</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished one-time tasks carry forward</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
+ return '<section class="card span12 today-tasks-card"><div class="row spread wrap"><div><div class="kicker">MY DAY</div><h2 style="margin:7px 0 3px">'+(date===TODAY?'What matters today':'Tasks for this day')+'</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished one-time tasks carry forward</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
  '<form id="quickTaskForm" class="task-quick"><input type="text" name="title" maxlength="140" required aria-label="Quick add task" placeholder="'+(date===TODAY?'Add something for today…':'Add something for this day…')+'"><button type="submit" class="btn primary">+ Add</button></form>'+
  '<div class="task-list">'+(all.length?all.slice(0,5).map(t=>taskItem(t,true,date)).join(''):'<div class="empty">Nothing on your list yet. Add one thing you want to accomplish today.</div>')+'</div>'+
  (all.length>5?'<button class="btn small" style="margin-top:12px" data-tab="tasks">See all '+all.length+' tasks →</button>':'')+'</section>';
@@ -1266,11 +1266,11 @@ function birthdayEditCalendarValue(b){
 }
 /* Progressive Planner agenda: only render the days reached while scrolling. */
 function plannerTaskCompact(task,day){
- const done=taskDone(task,day),revealed=ui.swipedTaskId===task.id;
+ const occurrenceId=task.id+'@'+day,done=taskDone(task,day),revealed=ui.swipedTaskId===occurrenceId;
  const info=[task.repeat&&task.repeat!=='none'?'↻ '+taskRepeatLabel(task):'',
   task.priority==='high'?'Important':'',
   (task.repeat||'none')==='none'&&task.due<day?'Carried forward':''].filter(Boolean).join(' · ');
- return '<div class="task-swipe planner-mini-task'+(revealed?' is-revealed':'')+'" data-task-swipe="'+h(task.id)+'">'+
+ return '<div class="task-swipe planner-mini-task'+(revealed?' is-revealed':'')+'" data-task-swipe="'+h(occurrenceId)+'">'+
   '<div class="task-swipe-actions"><button type="button" class="task-edit-reveal" data-task-edit="'+h(task.id)+'" tabindex="'+(revealed?'0':'-1')+'">Edit</button>'+
   '<button type="button" class="task-delete-reveal" data-task-delete="'+h(task.id)+'" tabindex="'+(revealed?'0':'-1')+'">Delete</button></div>'+
   '<div class="task-item'+(done?' is-done':'')+'">'+
@@ -1278,7 +1278,7 @@ function plannerTaskCompact(task,day){
   '<div class="task-content"><strong>'+h(task.title)+'</strong>'+
   (info?'<span class="planner-mini-meta">'+h(info)+'</span>':'')+
   (task.notes?'<span class="planner-mini-note">'+h(task.notes)+'</span>':'')+'</div>'+
-  '<button type="button" class="task-more" data-task-reveal="'+h(task.id)+'" aria-expanded="'+revealed+'" aria-label="Edit or delete '+h(task.title)+'">···</button></div></div>';
+  '<button type="button" class="task-more" data-task-reveal="'+h(occurrenceId)+'" aria-expanded="'+revealed+'" aria-label="Edit or delete '+h(task.title)+'">···</button></div></div>';
 }
 function plannerEventCompact(e,day){
  const unique=e.id+'@'+day,revealed=ui.selectedImportantId===unique,
