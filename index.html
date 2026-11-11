@@ -562,6 +562,7 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .today-date-chooser label{color:var(--muted);font-size:12px;font-weight:800}
 .today-date-chooser input{width:160px;min-height:40px;font-size:16px}
 @media(max-width:430px){.today-date-area{margin-bottom:13px}.today-date-label{min-width:146px;font-size:12px}.today-date-arrow{width:41px;flex-basis:41px}.today-date-chooser{width:100%;gap:7px}.today-date-chooser label{width:100%;text-align:center}}
+.today-date-live-note{color:var(--muted);font-size:11px;line-height:1.35;text-align:center;max-width:95%}
 </style>
 </head>
 <body>
@@ -821,7 +822,7 @@ function homeDateBar(){
   '<button type="button" class="today-date-label" data-home-date-pick="1" aria-label="Choose date, currently '+h(label)+'" aria-expanded="'+ui.homeDatePickerOpen+'" aria-controls="homeDateChooser">'+h(label)+'</button>'+
   '<button type="button" class="today-date-arrow" data-home-date-step="1" aria-label="Next day" title="Next day">›</button>'+
   '</nav>'+
-  (!current?'<button type="button" class="today-date-return" data-home-date-today="1">↩ Back to today</button>':'<span class="today-date-now">TODAY</span>')+
+  (!current?'<button type="button" class="today-date-return" data-home-date-today="1">↩ Back to today</button><span class="today-date-live-note">Shopping, food ideas and spending still show your current lists.</span>':'<span class="today-date-now">TODAY</span>')+
   (ui.homeDatePickerOpen?'<div class="today-date-chooser" id="homeDateChooser"><label for="homeDateInput">Jump to a date</label>'+
    '<input type="date" id="homeDateInput" aria-label="Choose day to view" value="'+h(date)+'" min="1900-01-01" max="2099-12-31">'+
    '<button type="button" class="btn small" data-home-date-today="1">Today</button></div>':'')+
