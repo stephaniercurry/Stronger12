@@ -573,6 +573,22 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .today-date-now{font-size:9px}
 .today-date-return{min-height:20px;font-size:11px}
 @media(max-width:430px){.today-date-area{margin-bottom:9px}.today-date-label{min-width:118px;font-size:10px}.today-date-arrow{width:33px;flex-basis:33px}}
+
+/* Finished classes share the same close / copy / edit pattern as strength. */
+.class-workout-card{display:grid;gap:13px;align-content:start}
+.class-completed-list{display:grid;gap:10px}
+.class-completed-item{display:grid;gap:9px;padding:12px;border:1px solid #cde4dd;border-radius:13px;background:#f3faf7}
+.class-completed-item h3{margin:0 0 4px;font-size:18px}
+.class-completed-item .tiny{margin:0;overflow-wrap:anywhere}
+.class-completed-item .badgecomplete{justify-self:start}
+.class-completed-main{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.class-completed-duration{font-size:17px;color:#246e67;white-space:nowrap}
+.class-copy-status:empty{display:none}
+.class-finish-form{padding:11px 0 0;border-top:1px solid var(--line)}
+.class-history{padding-top:11px;border-top:1px solid var(--line)}
+.class-history summary{font-size:13px;font-weight:750;cursor:pointer}
+.class-history .yoga-log{margin-top:12px}
+@media(max-width:430px){.class-completed-item{padding:10px}.class-completed-item .completed-workout-actions{display:grid}.class-completed-item .completed-workout-actions button{width:100%}}
 </style>
 </head>
 <body>
@@ -894,18 +910,61 @@ function yogaThisWeek(){
  const offset=(dateOf(TODAY).getDay()+6)%7,mon=addDays(TODAY,-offset),end=addDays(mon,6);
  return state.yogaSessions.filter(y=>y.date>=mon&&y.date<=end);
 }
-function yogaWorkoutCard(){
- const edit=state.yogaSessions.find(y=>y.id===ui.editYogaId),history=state.yogaSessions.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
- const n=yogaThisWeek().length;
- return '<section class="card span7"><div class="row spread wrap"><div><div class="kicker">FLEXIBLE MOVEMENT</div><h2 style="margin:6px 0">Log yoga on any day</h2><p class="tiny" style="margin:0">'+n+' yoga '+(n===1?'session':'sessions')+' this week · no fixed day required</p></div>'+
- (edit?'<button class="btn small" data-yoga-cancel="1">Cancel edit</button>':'')+'</div>'+
- '<form id="yogaForm" class="stack" style="margin-top:13px"><div class="inlinefields"><div class="field"><label for="yogaDate">Day you attended</label><input id="yogaDate" name="date" type="date" required max="'+h(TODAY)+'" value="'+h(edit?.date||ui.yogaDate)+'"></div>'+
- '<div class="field"><label for="yogaMinutes">Minutes</label><input id="yogaMinutes" name="minutes" type="number" inputmode="numeric" min="1" max="600" step="1" required value="'+h(edit?.minutes||60)+'"></div></div>'+
- '<div class="field"><label for="yogaKind">Class / style</label><select id="yogaKind" name="kind">'+YOGA_KINDS.map(k=>'<option '+((edit?.kind||'Hot yoga')===k?'selected':'')+'>'+h(k)+'</option>').join('')+'</select></div>'+
- '<div class="field"><label for="yogaNotes">Notes (optional)</label><input id="yogaNotes" name="notes" maxlength="300" placeholder="Energy, recovery, how it felt…" value="'+h(edit?.notes||'')+'"></div>'+
- '<button class="btn primary" type="submit">'+(edit?'Save yoga changes':'+ Log yoga session')+'</button></form>'+
- '<div class="divider"></div><h3>Recent yoga</h3>'+
- (history.length?'<div class="yoga-log">'+history.slice(0,5).map(y=>'<div class="yoga-entry"><div><strong>'+h(formatDate(y.date,{weekday:'short',month:'short',day:'numeric'}))+'</strong><div class="tiny">'+h(y.kind||'Yoga')+' · '+h(y.minutes)+' min'+(y.notes?' · '+h(y.notes):'')+'</div></div><div class="buttonrow"><button class="btn small" data-yoga-edit="'+h(y.id)+'">Edit</button><button class="btn small danger" data-yoga-delete="'+h(y.id)+'" aria-label="Delete yoga session">Delete</button></div></div>').join('')+'</div>':'<p class="tiny">When you go to yoga, log it here. It counts regardless of which day you choose.</p>')+'</section>';
+/* Historical state is still called yogaSessions so existing users' classes
+   and JSON backups remain compatible with this broader Class UI. */
+function classSummaryText(entry){
+ const kind=String(entry.kind||'Class').trim()||'Class';
+ const lines=['Stronger 12 — Class Workout Summary',
+  'Date: '+formatDate(entry.date,{weekday:'long',month:'short',day:'numeric',year:'numeric'}),
+  'Status: Completed','Activity: '+kind,
+  'Duration: '+String(entry.minutes)+' minutes'];
+ const notes=String(entry.notes||'').trim();
+ if(notes)lines.push('Notes: '+notes);
+ return lines.join('\n');
+}
+function classCompletedCard(entry){
+ const kind=String(entry.kind||'Class').trim()||'Class';
+ return '<article class="class-completed-item" data-completed-class="'+h(entry.id)+'">'+
+  '<span class="badgecomplete">✓ Class completed</span>'+
+  '<div class="class-completed-main"><div><h3>'+h(kind)+'</h3><p class="tiny">'+h(formatDate(entry.date,{weekday:'long',month:'short',day:'numeric'}))+'</p></div>'+
+  '<strong class="class-completed-duration">'+h(entry.minutes)+' min</strong></div>'+
+  (entry.notes?'<p class="tiny">'+h(entry.notes)+'</p>':'')+
+  '<div class="buttonrow completed-workout-actions"><button type="button" class="btn primary" data-class-copy="'+h(entry.id)+'">Copy summary</button>'+
+  '<button type="button" class="btn" data-class-edit="'+h(entry.id)+'">Edit class</button></div>'+
+  '<p class="tiny class-copy-status" id="classCopyStatus-'+h(entry.id)+'" role="status" aria-live="polite"></p>'+
+  '<details class="workout-summary-preview"><summary>Preview summary</summary><pre>'+h(classSummaryText(entry))+'</pre></details>'+
+  '</article>';
+}
+function yogaWorkoutCard(date=tabDate('lift')){
+ const history=state.yogaSessions.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ const onDay=history.filter(y=>y.date===date);
+ const edit=onDay.find(y=>y.id===ui.editYogaId);
+ const showingForm=!onDay.length||ui.newClassFormDate===date||!!edit;
+ const n=yogaThisWeek().length,selected=String(edit?.kind||'');
+ const classForm=showingForm?'<form id="yogaForm" class="stack class-finish-form">'+
+  '<div class="inlinefields"><div class="field"><label for="yogaDate">Day attended</label><input id="yogaDate" name="date" type="date" required max="'+h(TODAY)+'" value="'+h(edit?.date||date)+'"></div>'+
+  '<div class="field"><label for="yogaMinutes">Duration (minutes)</label><input id="yogaMinutes" name="minutes" type="number" inputmode="numeric" min="1" max="600" step="1" required value="'+h(edit?.minutes||60)+'"></div></div>'+
+  '<div class="field"><label for="yogaKind">Class / activity</label><input id="yogaKind" name="kind" type="text" list="classKinds" maxlength="80" required value="'+h(selected)+'" placeholder="Yoga, pole, dance, anything…">'+
+  '<datalist id="classKinds">'+CLASS_SUGGESTIONS.map(x=>'<option value="'+h(x)+'"></option>').join('')+'</datalist>'+
+  '<span class="tiny">Choose a suggestion or type any activity.</span></div>'+
+  '<div class="field"><label for="yogaNotes">Notes (optional)</label><input id="yogaNotes" name="notes" maxlength="300" placeholder="Energy, recovery, how it felt…" value="'+h(edit?.notes||'')+'"></div>'+
+  '<div class="buttonrow"><button class="btn primary" type="submit">'+(edit?'✓ Save & close class':'✓ Finish & save class')+'</button>'+
+  ((edit||onDay.length)?'<button class="btn" type="button" data-class-cancel="1">Cancel</button>':'')+
+  '</div></form>':'';
+ const others=history.filter(y=>y.date!==date).slice(0,5);
+ const older=others.length?'<details class="class-history"><summary>Recent classes</summary><div class="yoga-log">'+others.map(y=>
+  '<div class="yoga-entry"><div><strong>'+h(formatDate(y.date,{weekday:'short',month:'short',day:'numeric'}))+'</strong>'+
+  '<div class="tiny">'+h(y.kind||'Class')+' · '+h(y.minutes)+' min'+(y.notes?' · '+h(y.notes):'')+'</div></div>'+
+  '<div class="buttonrow"><button class="btn small" data-yoga-edit="'+h(y.id)+'">Edit</button>'+
+  '<button class="btn small danger" data-yoga-delete="'+h(y.id)+'" aria-label="Delete class">Delete</button></div></div>').join('')+'</div></details>':'';
+ return '<section class="card span7 class-workout-card" id="classWorkoutCard">'+
+  '<div class="row spread wrap"><div><div class="kicker">FLEXIBLE MOVEMENT</div>'+
+  '<h2 style="margin:6px 0">'+(onDay.length&&!showingForm?'Class completed':'Log a class')+'</h2>'+
+  '<p class="tiny" style="margin:0">'+n+' '+(n===1?'class':'classes')+' logged this week · yoga, pole, dance or anything else</p></div>'+
+  (!showingForm?'<button type="button" class="btn small" data-class-new="1">+ Another class</button>':'')+'</div>'+
+  (onDay.length?'<div class="class-completed-list">'+onDay.map(classCompletedCard).join('')+'</div>':'')+
+  classForm+older+
+  '</section>';
 }
 function yogaSummaryCard(){
  const n=yogaThisWeek().length,latest=state.yogaSessions.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
