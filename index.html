@@ -495,19 +495,22 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 #taskForm .planner-task-details-row>.field{
  width:100%;min-width:0;max-width:100%;overflow:visible
 }
-#importantDateForm .planner-event-dates-row input[type="date"],
-#taskForm .planner-task-details-row input[type="date"]{
- display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;
- height:46px;min-height:46px;max-height:46px;
- padding:8px 12px;font-size:16px;text-align:left
+/* The native iOS date control has an intrinsic width wider than its CSS box.
+   Put it in a clipped overlay; render the visible value in an ordinary field
+   so left/right edges always match the other Planner inputs. */
+.planner-date-shell{
+ position:relative;display:flex;align-items:center;width:100%;min-width:0;
+ max-width:100%;height:46px;box-sizing:border-box;overflow:hidden;
+ padding:0 12px;border:1px solid #d5dce7;border-radius:13px;
+ background:#fff;color:var(--ink);font-size:16px
 }
-#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-date-and-time-value,
-#taskForm .planner-task-details-row input[type="date"]::-webkit-date-and-time-value{
- min-width:0;text-align:left
-}
-#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-datetime-edit,
-#taskForm .planner-task-details-row input[type="date"]::-webkit-datetime-edit{
- min-width:0;max-width:100%;padding:0
+.planner-date-shell:focus-within{outline:3px solid #71bdbe;outline-offset:2px}
+.planner-date-shell .planner-date-value{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+#importantDateForm .planner-date-shell input[type="date"],
+#taskForm .planner-date-shell input[type="date"]{
+ position:absolute;inset:0;opacity:0;width:100%;min-width:0;max-width:100%;
+ height:100%;min-height:0;max-height:none;box-sizing:border-box;
+ margin:0;padding:0;border:0;cursor:pointer;z-index:1
 }
 #importantDateForm .planner-entry-kind select,
 #taskForm .planner-entry-kind select{width:100%;max-width:100%}
@@ -1013,6 +1016,19 @@ function plannerEventTypeSelector(selected='todo'){
  return '<div class="field planner-entry-kind"><label for="importantType">Event type</label>'+
   '<select id="importantType" name="type" aria-label="Event type">'+plannerEventTypeOptions(selected,true)+'</select></div>';
 }
+function plannerDateInput(id,name,value,required=false){
+ const date=validCalendarDate(value)?value:'';
+ const visible=date?formatDate(date,{month:'short',day:'numeric',year:'numeric'}):'';
+ return '<div class="planner-date-shell">'+
+  '<span class="planner-date-value" aria-hidden="true">'+h(visible)+'</span>'+
+  '<input type="date" id="'+h(id)+'" name="'+h(name)+'"'+(required?' required':'')+
+  ' value="'+h(date)+'"></div>';
+}
+function syncPlannerDateText(input){
+ const label=input.closest('.planner-date-shell')?.querySelector('.planner-date-value');
+ if(label)label.textContent=validCalendarDate(input.value)?
+  formatDate(input.value,{month:'short',day:'numeric',year:'numeric'}):'';
+}
 function plannerTaskForm(){
  const edit=state.tasks.find(t=>t.id===ui.editTaskId);
  if(ui.plannerForm!=='task'&&!edit)return '';
@@ -1021,7 +1037,7 @@ function plannerTaskForm(){
  '<form id="taskForm" class="stack" style="margin-top:14px">'+
  (edit?'':plannerEventTypeSelector('todo'))+
  '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
- '<div class="inlinefields planner-task-details-row"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.plannerEntryDraft?.date||ui.importantDate)+'"></div>'+
+ '<div class="inlinefields planner-task-details-row"><div class="field"><label for="taskDue">Due date</label>'+plannerDateInput('taskDue','due',edit?.due||ui.plannerEntryDraft?.date||ui.importantDate,true)+'</div>'+
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
  '<div class="field"><label for="taskRepeat">Repeat</label><select id="taskRepeat" name="repeat">'+Object.entries(TASK_REPEATS).map(([value,label])=>'<option value="'+value+'" '+((edit?.repeat||'none')===value?'selected':'')+'>'+h(label)+'</option>').join('')+'</select></div>'+
  '<div class="field task-interval-field" id="taskIntervalField" '+((edit?.repeat||'none')==='interval'?'':'style="display:none"')+'><label for="taskIntervalDays">Repeat every how many days?</label><input id="taskIntervalDays" name="repeatDays" type="number" inputmode="numeric" min="1" max="365" step="1" value="'+h(edit?.repeatDays||3)+'" '+((edit?.repeat||'none')==='interval'?'required':'')+'><small class="tiny">Starts on the due date, then repeats every N calendar days.</small></div>'+
@@ -1465,14 +1481,14 @@ function importantDatesPanel(){
   '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
   '<div class="field planner-entry-kind"><label for="importantType">Event type</label><select name="type" id="importantType">'+plannerEventTypeOptions(type,!editing)+'</select></div>'+
   '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
-  '<div class="inlinefields planner-event-dates-row"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
-  '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
+  '<div class="inlinefields planner-event-dates-row"><div class="field"><label for="importantDate">Start date</label>'+plannerDateInput('importantDate','date',chosenFormDate,true)+'</div>'+
+  '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label>'+plannerDateInput('importantEndDate','endDate',event?.end||'')+'</div></div>'+
   '<div class="inlinefields planner-event-time-row"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><span class="field-label">Time (optional)</span>'+eventTimePicker(event?.time||'')+'</div>'+
   '<div class="field" id="importantRelationField"'+(type!=='birthday'?' style="display:none"':'')+'><label for="importantRelation">Birthday group</label><select name="relation" id="importantRelation">'+BIRTHDAY_RELATIONS.map(v=>'<option '+((birthday?.relation||'Family')===v?'selected':'')+'>'+h(v)+'</option>').join('')+'</select></div></div>'+
   '<div class="field" id="importantBirthYearField"'+(type!=='birthday'?' style="display:none"':'')+'><label class="important-toggle"><input type="checkbox" name="useBirthYear" id="importantBirthYear" '+(birthday?.year?'checked':'')+'> Use selected year to show their age</label><span class="tiny">Birthdays repeat each year, even without a birth year.</span></div>'+
   '<div class="field" id="importantRepeatField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantRepeat">Repeat</label><select name="repeat" id="importantRepeat">'+Object.entries(EVENT_REPEATS).map(([key,label])=>'<option value="'+key+'" '+(eventRepeat===key?'selected':'')+'>'+label+'</option>').join('')+'</select></div>'+
   '<fieldset class="event-repeat-days" id="importantRepeatDaysField"'+(!hasRecurringDays||type==='birthday'?' style="display:none"':'')+'><legend>Repeat on</legend><div class="event-weekdays">'+EVENT_WEEKDAYS.map((day,index)=>'<label class="event-weekday"><input type="checkbox" name="repeatDays" value="'+index+'" '+(selectedWeekDays.includes(index)?'checked':'')+'><span>'+day+'</span></label>').join('')+'</div><span class="tiny">Select one or more days, such as Mon and Wed for yoga.</span></fieldset>'+
-  '<div class="field" id="importantRepeatUntilField"'+(eventRepeat==='none'||type==='birthday'?' style="display:none"':'')+'><label for="importantRepeatUntil">Stop repeating after (optional)</label><input type="date" name="repeatUntil" id="importantRepeatUntil" value="'+h(event?.repeatUntil||'')+'"><span class="tiny">Leave blank to continue indefinitely. The start date is the earliest possible occurrence.</span></div>'+
+  '<div class="field" id="importantRepeatUntilField"'+(eventRepeat==='none'||type==='birthday'?' style="display:none"':'')+'><label for="importantRepeatUntil">Stop repeating after (optional)</label>'+plannerDateInput('importantRepeatUntil','repeatUntil',event?.repeatUntil||'')+'<span class="tiny">Leave blank to continue indefinitely. The start date is the earliest possible occurrence.</span></div>'+
   '<div class="field event-today-only" id="importantTodayOnlyField"'+(type==='birthday'?' style="display:none"':'')+'>'+
   '<label class="event-today-only-label"><input id="importantShowOnlyToday" name="showOnlyOnDay" type="checkbox" '+(showOnlyOnDay?'checked':'')+'> <span><strong>Show only on the day of the event</strong><small>Hide future occurrences from Coming up on Today. Still visible in Planner.</small></span></label></div>'+
   '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
@@ -2599,8 +2615,9 @@ document.addEventListener('touchend',ev=>{
  if(ev.cancelable)ev.preventDefault();
  render();
 },{passive:false});
-document.addEventListener('input',ev=>{const el=ev.target;if(el.dataset.set){const s=ensureSession(ui.week,ui.day),id=el.dataset.ex,i=Number(el.dataset.idx),k=el.dataset.set;if(!s.sets[id])s.sets[id]=[{},{},{}];s.sets[id][i][k]=el.value;save();return}if(el.id==='sessionNotes'){ensureSession(ui.week,ui.day).notes=el.value;save()}});
+document.addEventListener('input',ev=>{const el=ev.target;if(el.matches?.('.planner-date-shell input[type="date"]'))syncPlannerDateText(el);if(el.dataset.set){const s=ensureSession(ui.week,ui.day),id=el.dataset.ex,i=Number(el.dataset.idx),k=el.dataset.set;if(!s.sets[id])s.sets[id]=[{},{},{}];s.sets[id][i][k]=el.value;save();return}if(el.id==='sessionNotes'){ensureSession(ui.week,ui.day).notes=el.value;save()}});
 document.addEventListener('change',ev=>{const el=ev.target;
+ if(el.matches?.('.planner-date-shell input[type="date"]'))syncPlannerDateText(el);
  if(el.id==='importantType'&&!ui.editTaskId&&!ui.editImportantId&&!ui.editBirthdayId&&['task','event'].includes(ui.plannerForm)){
   const choice=el.value;
   const kind=choice==='todo'?'task':'event';
