@@ -1830,7 +1830,7 @@ function setWorkoutViewDate(date){
  if(!validCalendarDate(date))return;
  ui.workoutDate=date===TODAY?null:date;
  ui.workoutDatePickerOpen=false;
- ui.editYogaId=null;
+ ui.editYogaId=null;ui.newClassFormDate=null;
  ui.openCompletedWorkoutKey=null;
  const match=workoutDateMatch(date);
  if(match){
@@ -1844,7 +1844,7 @@ function openWorkoutSlot(){
  const date=validCalendarDate(slot?.date)&&(slot.completed||sessionHasLogs(slot)||slot.date!==scheduledDate(w,day))?slot.date:scheduledDate(w,day);
  ui.workoutDate=date===TODAY?null:date;
  ui.workoutDatePickerOpen=false;
- ui.openCompletedWorkoutKey=null;ui.editYogaId=null;
+ ui.openCompletedWorkoutKey=null;ui.editYogaId=null;ui.newClassFormDate=null;
  if(workoutMode(w,day)==='yoga')ui.yogaDate=date<=TODAY?date:TODAY;
  render();
 }
@@ -2681,7 +2681,11 @@ document.addEventListener('submit',ev=>{
  // Keep the existing strength workout and class on the same day independent.
  if(ui.tab==='lift'){
   const match=workoutDateMatch(date);
-  if(match){ui.week=match.week;ui.day=match.day}
+  if(match){
+   ui.week=match.week;ui.day=match.day;
+   const strength=state.workouts[key(match.week,match.day)];
+   if(!strength||(!strength.completed&&!sessionHasLogs(strength)))state.workoutChoices[key(match.week,match.day)]='yoga';
+  }
   ui.workoutDate=date===TODAY?null:date;
  }
  save();render();return
