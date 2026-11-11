@@ -709,6 +709,25 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
  .planner-month-expand{width:30px;height:30px;flex-basis:30px}
  .planner-scroll-agenda{height:clamp(290px,52dvh,720px);padding:3px}
 }
+/* Compact only the What matters today card; Planner rows remain unchanged. */
+.today-grid>.today-tasks-card{padding:15px 15px 13px}
+.today-tasks-card .row.spread{gap:8px}
+.today-tasks-card .row.spread h2{margin:3px 0 2px!important;font-size:19px;line-height:1.2}
+.today-tasks-card .row.spread .tiny{line-height:1.3}
+.today-tasks-card .row.spread>.btn{min-height:34px;padding:6px 9px}
+.today-tasks-card .task-quick{margin:9px 0 8px;gap:7px}
+.today-tasks-card .task-quick input{min-height:39px;padding:7px 10px;border-radius:10px;min-width:0}
+.today-tasks-card .task-quick .btn{min-height:39px;padding:7px 11px}
+.today-tasks-card .task-list{gap:2px}
+.today-tasks-card .task-swipe{border-radius:8px}
+.today-tasks-card .task-item{display:flex;align-items:center;flex-wrap:nowrap;min-height:43px;padding:5px 3px;gap:9px}
+.today-tasks-card .task-check{width:33px;height:33px;flex:0 0 33px;border-width:1.5px;border-radius:9px;font-size:17px}
+.today-tasks-card .task-content{min-width:0}
+.today-tasks-card .task-content strong{font-size:13px;line-height:1.24;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.today-tasks-card .task-meta{margin-top:2px;gap:3px 7px;font-size:10px;line-height:1.2}
+.today-tasks-card .task-meta:empty{display:none}
+.today-tasks-card .task-more{min-width:35px;min-height:35px;flex:0 0 35px;padding:4px;font-size:18px}
+.today-tasks-card .task-list+.btn{margin-top:8px!important}
 </style>
 </head>
 <body>
