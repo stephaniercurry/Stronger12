@@ -1820,9 +1820,9 @@ function lift(){
  const w=matching.week,d=matching.day;
  ui.week=w;ui.day=d;
  const mode=workoutMode(w,d),ph=phase(w),head=sectionDateBar('lift')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
- if(mode==='yoga')return head+yogaWorkoutCard()+
- '<section class="card span5"><div class="kicker">YOGA</div><h2 style="margin:8px 0">'+h(formatDate(scheduledDate(w,d),{weekday:'long'}))+' · Yoga</h2>'+
- '<p>Log yoga here on any day you go. Select the actual class date and duration in the form.</p>'+
+ if(mode==='yoga')return head+(date<=TODAY?yogaWorkoutCard():'<section class="card span7"><div class="kicker">PLANNED MOVEMENT</div><h2 style="margin:8px 0">Yoga on '+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</h2><p class="tiny">You can plan ahead here. Return on or after this date to log a class you attended.</p></section>')+
+ '<section class="card span5"><div class="kicker">YOGA</div><h2 style="margin:8px 0">'+h(formatDate(date,{weekday:'long'}))+' · Yoga</h2>'+
+ '<p>'+(date<=TODAY?'Log yoga on the day you attended, including a past day.':'Your yoga session can be logged after it happens.')+'</p>'+
  '<div class="notice">Your yoga history is independent of the 12-week strength cycles. Any saved strength workout for this day is preserved.</div><div class="divider"></div><h3>Your weekly rhythm</h3>'+weeklyCalendar()+'</section></div>';
  const session=getSession(w,d),routine=sessionRoutine(session),plan=planFor(routine,mode),c=activeCycle();
  if(session.completed&&ui.openCompletedWorkoutKey!==key(w,d))return head+completedWorkoutCard(session,plan)+'</div>';
