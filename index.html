@@ -932,7 +932,8 @@ function classCompletedCard(entry){
   '<strong class="class-completed-duration">'+h(entry.minutes)+' min</strong></div>'+
   (entry.notes?'<p class="tiny">'+h(entry.notes)+'</p>':'')+
   '<div class="buttonrow completed-workout-actions"><button type="button" class="btn primary" data-class-copy="'+h(entry.id)+'">Copy summary</button>'+
-  '<button type="button" class="btn" data-class-edit="'+h(entry.id)+'">Edit class</button></div>'+
+  '<button type="button" class="btn" data-class-edit="'+h(entry.id)+'">Edit class</button>'+
+  '<button type="button" class="btn danger" data-class-delete="'+h(entry.id)+'">Delete</button></div>'+
   '<p class="tiny class-copy-status" id="classCopyStatus-'+h(entry.id)+'" role="status" aria-live="polite"></p>'+
   '<details class="workout-summary-preview"><summary>Preview summary</summary><pre>'+h(classSummaryText(entry))+'</pre></details>'+
   '</article>';
