@@ -698,7 +698,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,homeDate:null,homeDatePickerOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1732,8 +1732,85 @@ async function copyWorkoutSummaryText(text){
   setStatus('Copied. Paste into another AI whenever you are ready.');
  }catch(error){setStatus('Could not copy automatically. Open Preview summary and select the text to copy.')}
 }
+/* Food and Workout use the same day navigator styling as Today, but their
+   date selections stay independent until deliberately opened from another tab.
+   No records are written when browsing days. */
+function tabDate(section){
+ if(section==='food')return validCalendarDate(ui.foodDate)?ui.foodDate:TODAY;
+ if(section==='lift')return validCalendarDate(ui.workoutDate)?ui.workoutDate:TODAY;
+ return homeViewDate();
+}
+function workoutDateMatch(date){
+ const cycle=activeCycle(),start=cycle.startDate,end=addDays(start,83);
+ // A session moved to a different actual training date takes priority over a
+ // planned placeholder. Only use the active cycle, never mutate it to browse.
+ const logged=Object.entries(state.workouts).map(([k,s])=>({key:k,session:s})).filter(x=>
+  x.session?.cycleId===cycle.id&&x.session.date===date&&
+  (x.session.completed||sessionHasLogs(x.session))&&
+  Number.isInteger(x.session.week)&&x.session.week>=1&&x.session.week<=12&&
+  ['mon','tue','wed','thu','fri'].includes(x.session.day));
+ if(logged.length){logged.sort((a,b)=>Number(b.session.completed)-Number(a.session.completed));return {week:logged[0].session.week,day:logged[0].session.day,logged:true}}
+ const weekday=dateOf(date).getDay();
+ if(date<start||date>end||weekday===0||weekday===6)return null;
+ return {week:Math.floor(daysBetween(start,date)/7)+1,day:['','mon','tue','wed','thu','fri'][weekday],logged:false};
+}
+function setWorkoutViewDate(date){
+ if(!validCalendarDate(date))return;
+ ui.workoutDate=date===TODAY?null:date;
+ ui.workoutDatePickerOpen=false;
+ ui.editYogaId=null;
+ ui.openCompletedWorkoutKey=null;
+ const match=workoutDateMatch(date);
+ if(match){
+  ui.week=match.week;ui.day=match.day;
+  if(workoutMode(ui.week,ui.day)==='yoga')ui.yogaDate=date<=TODAY?date:TODAY;
+ }else if(date<=TODAY)ui.yogaDate=date;
+ render();
+}
+function setTabViewDate(section,date){
+ if(!validCalendarDate(date))return;
+ if(section==='food'){
+  ui.foodDate=date;ui.foodDatePickerOpen=false;render();return
+ }
+ if(section==='lift')setWorkoutViewDate(date);
+}
+function sectionDateBar(section){
+ const date=tabDate(section),current=date===TODAY,
+  open=section==='food'?ui.foodDatePickerOpen:ui.workoutDatePickerOpen,
+  label=formatDate(date,{weekday:'short',month:'short',day:'numeric',...(date.slice(0,4)!==TODAY.slice(0,4)?{year:'numeric'}:{})});
+ return '<div class="today-date-area section-date-area"><nav class="today-date-bar" aria-label="Browse '+(section==='food'?'Food':'Workout')+' by date">'+
+  '<button type="button" class="today-date-arrow" data-section-date-step="-1" data-section="'+section+'" aria-label="Previous day">‹</button>'+
+  '<button type="button" class="today-date-label" data-section-date-pick="'+section+'" aria-expanded="'+open+'" aria-controls="'+section+'DateChooser" aria-label="Choose '+(section==='food'?'food':'workout')+' date, currently '+h(label)+'">'+h(label)+'</button>'+
+  '<button type="button" class="today-date-arrow" data-section-date-step="1" data-section="'+section+'" aria-label="Next day">›</button></nav>'+
+  (!current?'<button type="button" class="today-date-return" data-section-date-today="'+section+'">↩ Back to today</button>':'<span class="today-date-now">TODAY</span>')+
+  (open?'<div class="today-date-chooser" id="'+section+'DateChooser"><label for="'+section+'DateJump">Jump to a date</label>'+
+   '<input type="date" id="'+section+'DateJump" aria-label="Jump to '+(section==='food'?'food':'workout')+' date" value="'+h(date)+'" min="1900-01-01" max="2099-12-31">'+
+   '<button type="button" class="btn small" data-section-date-today="'+section+'">Today</button></div>':'')+
+  '</div>';
+}
+function workoutOffDayView(date){
+ const c=activeCycle(),inCycle=date>=c.startDate&&date<=addDays(c.startDate,83),
+  weekday=dateOf(date).getDay(),isWeekend=weekday===0||weekday===6;
+ const hasYoga=state.yogaSessions.filter(y=>y.date===date);
+ const reason=inCycle&&isWeekend?'No strength workout scheduled. Your weekends are free.':
+  'This date is outside the selected 12-week training cycle.';
+ const head=sectionDateBar('lift')+'<div class="grid">'+
+  '<section class="card span12 workout-offday"><span class="kicker">'+(inCycle?'RECOVERY DAY':'OUTSIDE CURRENT PLAN')+'</span>'+
+  '<h2 style="margin:6px 0">'+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</h2>'+
+  '<p class="tiny">'+h(reason)+'</p>'+
+  (hasYoga.length?'<p class="tiny">✓ Yoga logged: '+hasYoga.map(y=>h(y.kind||'Yoga')+' · '+h(y.minutes)+' min').join(' · ')+'</p>':'')+
+  '<p class="tiny">Use the arrows to view another day, or select a training cycle below.</p></section>'+
+  cycleControls();
+ // Yoga can be logged on a weekend after it has happened; never pre-log a future class.
+ if(date<=TODAY){ui.yogaDate=date;return head+yogaWorkoutCard()+'</div>'}
+ return head+'</div>';
+}
 function lift(){
- const w=ui.week,d=ui.day,mode=workoutMode(w,d),ph=phase(w),head=header('Workout.','Pick a day and activity. Move your strength sessions around without losing the 12-week plan.')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
+ const date=tabDate('lift'),matching=workoutDateMatch(date);
+ if(!matching)return workoutOffDayView(date);
+ const w=matching.week,d=matching.day;
+ ui.week=w;ui.day=d;
+ const mode=workoutMode(w,d),ph=phase(w),head=sectionDateBar('lift')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
  if(mode==='yoga')return head+yogaWorkoutCard()+
  '<section class="card span5"><div class="kicker">YOGA</div><h2 style="margin:8px 0">'+h(formatDate(scheduledDate(w,d),{weekday:'long'}))+' · Yoga</h2>'+
  '<p>Log yoga here on any day you go. Select the actual class date and duration in the form.</p>'+
@@ -1762,7 +1839,7 @@ function lift(){
  '<h3>Back-conscious options</h3><p class="fineprint">Use supported movements and stop anything that increases pain. Recovery weeks are built into each cycle.</p></section></div>';
 }
 function exerciseCard(id,index,s,w){const e=EX[id],sets=s.sets[id]||[{},{},{}],label=e.style==='time'?'Seconds':e.perSide?'Reps / side':'Reps';return `<article class="exercise"><div class="ex-head"><div><div class="ex-tag">${String(index+1).padStart(2,'0')} · ${e.type==='upper'?'Upper body':e.type==='lower'?'Lower body':'Core'}</div><div class="ex-title">${h(e.name)}</div><div class="tiny">3 sets · ${range(e,w)}${e.perSide?'/side':''}${e.track==='body'?' · bodyweight':''}</div></div><a class="btn small" style="flex-shrink:0" href="${demoUrl(id)}" target="_blank" rel="noopener noreferrer" aria-label="Find ${h(e.name)} demonstration videos">▶ Video</a></div><div class="tiny" style="margin:8px 0 0">Video opens YouTube search results for this movement; choose a qualified trainer's demonstration.</div><div class="ex-hint">↗ ${h(exerciseHint(id,w))}</div><table class="sets-table"><thead><tr><th>Set</th><th>${e.track==='weight'?'Load ('+h(state.settings.weightUnit)+')':'Load *'}</th><th>${label}</th><th>Reps left</th></tr></thead><tbody>${[0,1,2].map(i=>{const x=sets[i]||{};return `<tr><td>${i+1}</td><td><input type="number" inputmode="decimal" min="0" step="0.5" aria-label="${h(e.name)} set ${i+1} load" data-set="weight" data-ex="${id}" data-idx="${i}" value="${h(x.weight??'')}" placeholder="${e.track==='body'?'0':'—'}"></td><td><input type="number" inputmode="numeric" min="0" step="1" aria-label="${h(e.name)} set ${i+1} ${label}" data-set="reps" data-ex="${id}" data-idx="${i}" value="${h(x.reps??'')}" placeholder="—"></td><td><select aria-label="${h(e.name)} set ${i+1} reps left" data-set="rir" data-ex="${id}" data-idx="${i}"><option value="">—</option>${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${String(x.rir??'')===String(n)?'selected':''}>${n}${n===5?'+':''}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table><details><summary>Form cues & substitution</summary><p class="fineprint" style="margin:8px 0 0">${h(e.cue)} <strong>Alternative:</strong> ${h(e.alt)}. ${e.track==='body'?'* For bodyweight work, load can remain 0.':'Log the combined load consistently for dumbbells (e.g., per dumbbell, not the sum) and add a note if needed.'}</p></details></article>`}
-function food(){const t=dailyTotals(ui.foodDate),todayItems=state.foods.filter(f=>f.date===ui.foodDate);return header('Protein + fiber, simplified.','No calorie counting required here. Log foods or entire meals and see how close you are to your daily targets.')+`<div class="grid"><section class="card span8"><div class="row spread wrap"><h2>Daily food log</h2><div class="field"><label for="foodDate">Select day</label><input type="date" id="foodDate" value="${h(ui.foodDate)}"></div></div><div class="grid" style="gap:13px;margin:8px 0 19px"><div class="span6"><div class="daily-row"><span class="kicker">Protein</span><strong>${fmt(t.protein,1)}g <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}</div><div class="span6"><div class="daily-row"><span class="kicker">Fiber</span><strong>${fmt(t.fiber,1)}g <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div></div><h3>Add an item or whole meal</h3><form id="foodForm" class="food-form"><div class="field"><label for="fName">Food / meal</label><input id="fName" name="name" required placeholder="e.g. chicken + lentils"></div><div class="field"><label for="fMeal">Meal</label><select id="fMeal" name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div><div class="field"><label for="fProtein">Protein (g)</label><input id="fProtein" type="number" inputmode="decimal" name="protein" min="0" step="0.1" required placeholder="0"></div><div class="field"><label for="fFiber">Fiber (g)</label><input id="fFiber" type="number" inputmode="decimal" name="fiber" min="0" step="0.1" required placeholder="0"></div><button type="submit" class="btn primary">+ Add</button></form><div class="divider"></div><h3>Logged today ${todayItems.length?`<small>(${todayItems.length} items)</small>`:''}</h3>${todayItems.length?todayItems.map(f=>`<div class="food-item"><div><div class="food-meal">${h(f.meal)}</div><strong>${h(f.name)}</strong><div class="food-numbers">${fmt(f.protein,1)}g protein · ${fmt(f.fiber,1)}g fiber</div></div><button class="btn small danger" data-delete-food="${h(f.id)}" aria-label="Delete ${h(f.name)}">Remove</button></div>`).join(''):'<div class="empty">Nothing logged for this date yet. Add a meal or use a quick-add food.</div>'}</section>
+function food(){const t=dailyTotals(ui.foodDate),todayItems=state.foods.filter(f=>f.date===ui.foodDate);return sectionDateBar('food')+`<div class="grid"><section class="card span8"><div class="row spread wrap"><h2>Daily food log</h2><span class="pill">${h(formatDate(ui.foodDate,{weekday:'short',month:'short',day:'numeric'}))}</span></div><div class="grid" style="gap:13px;margin:8px 0 19px"><div class="span6"><div class="daily-row"><span class="kicker">Protein</span><strong>${fmt(t.protein,1)}g <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}</div><div class="span6"><div class="daily-row"><span class="kicker">Fiber</span><strong>${fmt(t.fiber,1)}g <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div></div><h3>Add an item or whole meal</h3><form id="foodForm" class="food-form"><div class="field"><label for="fName">Food / meal</label><input id="fName" name="name" required placeholder="e.g. chicken + lentils"></div><div class="field"><label for="fMeal">Meal</label><select id="fMeal" name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div><div class="field"><label for="fProtein">Protein (g)</label><input id="fProtein" type="number" inputmode="decimal" name="protein" min="0" step="0.1" required placeholder="0"></div><div class="field"><label for="fFiber">Fiber (g)</label><input id="fFiber" type="number" inputmode="decimal" name="fiber" min="0" step="0.1" required placeholder="0"></div><button type="submit" class="btn primary">+ Add</button></form><div class="divider"></div><h3>Logged ${ui.foodDate===TODAY?'today':'on this day'} ${todayItems.length?`<small>(${todayItems.length} items)</small>`:''}</h3>${todayItems.length?todayItems.map(f=>`<div class="food-item"><div><div class="food-meal">${h(f.meal)}</div><strong>${h(f.name)}</strong><div class="food-numbers">${fmt(f.protein,1)}g protein · ${fmt(f.fiber,1)}g fiber</div></div><button class="btn small danger" data-delete-food="${h(f.id)}" aria-label="Delete ${h(f.name)}">Remove</button></div>`).join(''):'<div class="empty">Nothing logged for this date yet. Add a meal or use a quick-add food.</div>'}</section>
 <section class="card span4"><h2>Quick add</h2><p class="tiny">Approximate amounts; check packaging and adjust as needed. Quick-add foods are assigned to the meal selected below.</p><div class="field" style="margin-bottom:12px"><label for="presetMeal">Add to meal</label><select id="presetMeal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div><div class="food-presets">${FOODS.map((f,i)=>`<button class="preset" data-add-preset="${i}"><strong>+ ${h(f.name)}</strong><span>${fmt(f.protein,1)}g protein · ${fmt(f.fiber,1)}g fiber</span></button>`).join('')}</div><div class="notice" style="margin-top:17px">Your daily goals are editable in Settings. Protein and fiber values are estimates, not medical recommendations.</div></section></div>`}
 function nutChart(dates){const gP=Number(state.settings.proteinGoal)||130,gF=Number(state.settings.fiberGoal)||30;return `<div class="chart" aria-label="Protein and fiber goals over seven days">${dates.map(dt=>{const t=dailyTotals(dt),p=Math.min(115,t.protein/gP*100),f=Math.min(115,t.fiber/gF*100);return `<div class="chartcol"><div class="twobar"><div style="height:${Math.max(1,p)}%;background:#3d9872" title="${h(dt)}: ${fmt(t.protein,1)}g protein"></div><div style="height:${Math.max(1,f)}%;background:#d59c62" title="${h(dt)}: ${fmt(t.fiber,1)}g fiber"></div></div><small>${dateOf(dt).toLocaleDateString(undefined,{weekday:'short'})}</small></div>`}).join('')}</div><div class="legend">🟩 Protein (goal ${fmt(gP)}g) &nbsp; 🟧 Fiber (goal ${fmt(gF)}g). Bars show percentage of target (capped).</div>`}
 function progress(){const completed=cycleWorkoutEntries(activeCycle()).map(([,v])=>v).filter(x=>x.completed).sort((a,b)=>String(b.date).localeCompare(String(a.date)));const allCompleted=Object.values(state.workouts).filter(x=>x.completed);const foodDates=[...new Set(state.foods.map(f=>f.date))].sort().reverse();const totals=foodDates.map(d=>({date:d,...dailyTotals(d)}));const pAvg=totals.length?totals.slice(0,7).reduce((a,x)=>a+x.protein,0)/Math.min(7,totals.length):0;const fAvg=totals.length?totals.slice(0,7).reduce((a,x)=>a+x.fiber,0)/Math.min(7,totals.length):0;const exId=ui.chartEx,ex=EX[exId];const strengthPoints=Object.values(state.workouts).filter(s=>s.sets&&s.sets[exId]&&s.sets[exId].some(x=>x&&Number(x.reps)>0)).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(s=>({date:s.date,week:s.week,cycle:Math.max(1,state.cycles.findIndex(c=>c.id===(s.cycleId||'cycle-1'))+1),best:Math.max(...s.sets[exId].map(x=>ex.track==='body'?Number(x.reps)||0:Number(x.weight)||0))}));const series=strengthPoints.slice(-12),max=Math.max(1,...series.map(x=>x.best));return header('Progress you can see.','Build consistency first. Track your sets, follow your strength trend, and see your nutrition patterns.')+`<div class="grid"><section class="card span4"><div class="kicker">Workouts logged</div><div class="metric">${completed.length}<span class="muted" style="font-size:17px"> sessions</span></div><p class="tiny">This cycle: ${allCompleted.length} total logged across all cycles.</p></section><section class="card span4"><div class="kicker">Protein average</div><div class="metric">${fmt(pAvg,1)}<span class="muted" style="font-size:17px">g</span></div><p class="tiny">Across the last ${Math.min(7,totals.length)} days that include food entries.</p></section><section class="card span4"><div class="kicker">Fiber average</div><div class="metric">${fmt(fAvg,1)}<span class="muted" style="font-size:17px">g</span></div><p class="tiny">Across the last ${Math.min(7,totals.length)} days that include food entries.</p></section>
@@ -1787,6 +1864,28 @@ async function shareBackup(){const file=backupFile();if(navigator.canShare&&navi
 async function exportData(kind){if(kind==='share'){const name='stronger12-backup-'+iso(new Date())+'.json';const file=new File([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Stronger / 12 backup'});return;}catch(err){if(err&&err.name==='AbortError')return;}}dl(new Blob([await file.text()],{type:'application/json'}),name);alert('Backup downloaded. Save the file to iCloud Drive or Files so it is not only on this phone.');return;}if(kind==='json'){const file=backupFile();dl(file,file.name);markBackup();render();return}const lines=['cycle,date,week,day,routine,location,exercise,set,load,unit,reps_or_seconds,reps_left,session_completed,notes'];Object.values(state.workouts).sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(s=>Object.entries(s.sets||{}).forEach(([id,sets])=>sets.forEach((x,i)=>{if(!x||(!x.reps&&!x.weight))return;lines.push([(s.cycleId||'cycle-1'),s.date,s.week,s.day,sessionRoutine(s),s.venue||'home',EX[id]?.name||id,i+1,x.weight??'',state.settings.weightUnit,x.reps??'',x.rir??'',s.completed?'yes':'no',s.notes??''].map(csvCell).join(','))})));dl(new Blob([lines.join('\n')],{type:'text/csv'}),'stronger12-workouts-'+TODAY+'.csv');const foods=['date,meal,food,protein_g,fiber_g',...state.foods.map(f=>[f.date,f.meal,f.name,f.protein,f.fiber].map(csvCell).join(','))];dl(new Blob([foods.join('\n')],{type:'text/csv'}),'stronger12-foods-'+TODAY+'.csv')}
 function isWholeNumber(n){return Number.isFinite(n)&&n>0}
 document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+if(b.dataset.sectionDateStep){
+ const section=b.dataset.section;
+ if(section!==ui.tab||!['food','lift'].includes(section))return;
+ const step=Number(b.dataset.sectionDateStep);
+ if(![-1,1].includes(step))return;
+ setTabViewDate(section,addDays(tabDate(section),step));return
+}
+if(b.dataset.sectionDateToday){
+ const section=b.dataset.sectionDateToday;
+ if(section!==ui.tab||!['food','lift'].includes(section))return;
+ setTabViewDate(section,TODAY);return
+}
+if(b.dataset.sectionDatePick){
+ const section=b.dataset.sectionDatePick;
+ if(section!==ui.tab||!['food','lift'].includes(section))return;
+ if(section==='food')ui.foodDatePickerOpen=!ui.foodDatePickerOpen;
+ else ui.workoutDatePickerOpen=!ui.workoutDatePickerOpen;
+ render();
+ const isOpen=section==='food'?ui.foodDatePickerOpen:ui.workoutDatePickerOpen;
+ if(isOpen)document.getElementById(section+'DateJump')?.focus?.();
+ return
+}
 if(b.dataset.homeDateStep){
  const offset=Number(b.dataset.homeDateStep);
  if(![-1,1].includes(offset)||ui.tab!=='home')return;
@@ -2196,6 +2295,14 @@ if(el.id==='moneyActivityType'){
  if(dest)dest.style.display=el.value==='move'?'':'none';
  return
 }
+if(el.id==='foodDateJump'&&ui.tab==='food'){
+ if(validCalendarDate(el.value))setTabViewDate('food',el.value);
+ return
+}
+if(el.id==='liftDateJump'&&ui.tab==='lift'){
+ if(validCalendarDate(el.value))setTabViewDate('lift',el.value);
+ return
+}
 if(el.id==='homeDateInput'){
  if(validCalendarDate(el.value))setHomeViewDate(el.value);
  return
@@ -2217,7 +2324,7 @@ if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCy
  save();render();return
 }
 if(el.id==='sessionDate'){ensureSession(ui.week,ui.day).date=el.value;save();return}
-if(el.id==='foodDate'){ui.foodDate=el.value;render();return}
+if(el.id==='foodDate'){if(validCalendarDate(el.value))setTabViewDate('food',el.value);return}
 if(el.id==='chartEx'){ui.chartEx=el.value;render();return}
 if(el.id==='importantShowOnlyToday'){el.dataset.userPicked='true';return}
 if(el.name==='repeatDays'){
