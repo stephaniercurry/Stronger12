@@ -668,6 +668,11 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-mini-meta{font-size:10px;color:#71827c;line-height:1.2}
 .planner-mini-note{font-size:10px;color:#778780;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .planner-scroll-agenda .task-swipe-actions{width:134px}
+/* On iOS, an offscreen swipe-action layer can flash at the agenda's scroll edges.
+   Don't paint closed actions, and clip each row before it reaches the scroll viewport. */
+.planner-scroll-agenda .task-swipe{isolation:isolate;contain:paint}
+.planner-scroll-agenda .task-swipe:not(.is-revealed) .task-swipe-actions{display:none}
+.planner-scroll-agenda .task-swipe .task-item,.planner-scroll-agenda .event-swipe .event-row{will-change:auto}
 .planner-scroll-agenda .task-edit-reveal,.planner-scroll-agenda .task-delete-reveal{font-size:12px}
 .planner-scroll-agenda .task-swipe.is-revealed .task-item,.planner-scroll-agenda .event-swipe.is-revealed .event-row{transform:translateX(-134px)}
 .planner-scroll-end{display:flex;justify-content:center;padding:16px 0 8px}
