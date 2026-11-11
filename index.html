@@ -598,8 +598,7 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-compact-top .planner-new-buttons{display:flex;gap:6px}
 .planner-compact-top .planner-new-buttons .btn{min-height:34px;padding:6px 11px}
 .planner-compact-top .planner-new-buttons .planner-add-icon{position:relative;overflow:visible;width:40px;height:40px;min-height:40px;min-width:40px;padding:7px;display:grid;place-items:center;border-radius:10px}
-.planner-add-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.planner-add-icon .planner-icon-plus{position:absolute;left:0;top:50%;transform:translateY(-40%);width:21px;height:21px;display:grid;place-items:center;color:#f7b5c4;font-size:19px;line-height:1;font-weight:900}
+.planner-add-icon svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .planner-entry-kind{margin:0 0 4px}.planner-entry-kind select{max-width:260px;min-height:38px}
 .planner-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0 10px}
 .planner-navigation label{font-size:12px;color:var(--muted);font-weight:750}
@@ -1440,7 +1439,7 @@ function importantDatesPanel(){
  return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
  '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
  '<div class="planner-new-buttons"><button type="button" class="btn small primary planner-add-icon" data-planner-add="task" aria-label="Add task or event" title="Add task or event">'+
- '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M7 3v4M17 3v4M3 10h18"></path></svg><span class="planner-icon-plus" aria-hidden="true">+</span></button></div></div>'+
+ '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4v6M21 4v6M5 13h20M19 27H8a3 3 0 0 1-3-3V10a3 3 0 0 1 3-3h15a3 3 0 0 1 3 3v10"></path><path d="M26 21v10M21 26h10"></path></svg></button></div></div>'+
  '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
  '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
  '<div class="planner-calendar-shell">'+calendar+
