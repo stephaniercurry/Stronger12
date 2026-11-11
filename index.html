@@ -1620,7 +1620,7 @@ function workoutDayTabs(){
 }
 function workoutModeCard(){
  const mode=workoutMode(ui.week,ui.day),session=state.workouts[key(ui.week,ui.day)];
- return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">WORKOUT TYPE</div><h2 style="margin:6px 0">Train today at</h2></div><span class="tiny">'+h(formatDate(scheduledDate(ui.week,ui.day),{weekday:'long',month:'short',day:'numeric'}))+'</span></div>'+
+ return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">WORKOUT TYPE</div><h2 style="margin:6px 0">Train on this day at</h2></div><span class="tiny">'+h(formatDate(tabDate('lift'),{weekday:'long',month:'short',day:'numeric'}))+'</span></div>'+
  '<div class="venue-picker" role="group" aria-label="Choose home, gym or yoga">'+
  [['home','⌂ Home'],['gym','▣ Gym'],['yoga','☯ Yoga']].map(([id,label])=>'<button type="button" class="chip '+(mode===id?'active':'')+'" data-workout-mode="'+id+'" aria-pressed="'+(mode===id)+'">'+label+'</button>').join('')+'</div>'+
  (sessionHasLogs(session||{sets:{}})?'<p class="tiny" style="margin:10px 0 0">This day has strength sets saved. You can still choose Yoga; the saved strength work stays available. Its Home/Gym location is locked.</p>':'')+'</section>';
@@ -1746,7 +1746,7 @@ function workoutDateMatch(date){
  // planned placeholder. Only use the active cycle, never mutate it to browse.
  const logged=Object.entries(state.workouts).map(([k,s])=>({key:k,session:s})).filter(x=>
   x.session?.cycleId===cycle.id&&x.session.date===date&&
-  (x.session.completed||sessionHasLogs(x.session))&&
+  (x.session.completed||sessionHasLogs(x.session)||x.session.date!==scheduledDate(x.session.week,x.session.day))&&
   Number.isInteger(x.session.week)&&x.session.week>=1&&x.session.week<=12&&
   ['mon','tue','wed','thu','fri'].includes(x.session.day));
  if(logged.length){logged.sort((a,b)=>Number(b.session.completed)-Number(a.session.completed));return {week:logged[0].session.week,day:logged[0].session.day,logged:true}}
@@ -1765,6 +1765,15 @@ function setWorkoutViewDate(date){
   ui.week=match.week;ui.day=match.day;
   if(workoutMode(ui.week,ui.day)==='yoga')ui.yogaDate=date<=TODAY?date:TODAY;
  }else if(date<=TODAY)ui.yogaDate=date;
+ render();
+}
+function openWorkoutSlot(){
+ const w=ui.week,day=ui.day,slot=state.workouts[key(w,day)];
+ const date=validCalendarDate(slot?.date)&&(slot.completed||sessionHasLogs(slot)||slot.date!==scheduledDate(w,day))?slot.date:scheduledDate(w,day);
+ ui.workoutDate=date===TODAY?null:date;
+ ui.workoutDatePickerOpen=false;
+ ui.openCompletedWorkoutKey=null;ui.editYogaId=null;
+ if(workoutMode(w,day)==='yoga')ui.yogaDate=date<=TODAY?date:TODAY;
  render();
 }
 function setTabViewDate(section,date){
@@ -1818,7 +1827,7 @@ function lift(){
  const session=getSession(w,d),routine=sessionRoutine(session),plan=planFor(routine,mode),c=activeCycle();
  if(session.completed&&ui.openCompletedWorkoutKey!==key(w,d))return head+completedWorkoutCard(session,plan)+'</div>';
  return head+'<section class="card span8" id="workoutSessionCard"><div class="session-header"><div><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+' · Cycle '+(activeCycleIndex()+1)+' · Week '+w+'</span>'+
- '<h2 style="margin:12px 0 4px">'+h(formatDate(scheduledDate(w,d),{weekday:'long'}))+' — '+h(plan.title)+'</h2><p class="helper">'+h(plan.description)+' · 5-minute warm-up + 5 movements × 3 sets</p></div>'+
+ '<h2 style="margin:12px 0 4px">'+h(formatDate(date,{weekday:'long'}))+' — '+h(plan.title)+'</h2><p class="helper">'+h(plan.description)+' · 5-minute warm-up + 5 movements × 3 sets</p></div>'+
  (session.completed?'<span class="badgecomplete">✓ Completed</span>':'')+'</div>'+
  '<div class="field" style="margin:15px 0"><label for="routinePick">Which strength routine?</label>'+
  '<select id="routinePick" aria-label="Select strength routine">'+
@@ -1952,7 +1961,7 @@ if(mode){
  }
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
-}const tab=b.dataset.tab;if(tab){if(ui.tab==='home'&&tab==='food')ui.foodDate=homeViewDate();if(ui.tab==='home'&&tab==='tasks'){ui.importantDate=homeViewDate();ui.importantMonth=ui.importantDate.slice(0,7)}ui.tab=tab;if(tab==='lift')ui.week=currentWeek();render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));render();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}if(b.dataset.complete){
+}const tab=b.dataset.tab;if(tab){if(ui.tab==='home'&&tab==='food')ui.foodDate=homeViewDate();if(ui.tab==='home'&&tab==='tasks'){ui.importantDate=homeViewDate();ui.importantMonth=ui.importantDate.slice(0,7)}const from=ui.tab;ui.tab=tab;if(tab==='lift'){if(from==='home')setWorkoutViewDate(homeViewDate());else setWorkoutViewDate(tabDate('lift'));window.scrollTo(0,0);return}render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));openWorkoutSlot();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;openWorkoutSlot();return}if(b.dataset.complete){
  const session=ensureSession(ui.week,ui.day);
  const any=Object.values(session.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));
  if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}
@@ -2307,13 +2316,13 @@ if(el.id==='homeDateInput'){
  if(validCalendarDate(el.value))setHomeViewDate(el.value);
  return
 }
-if(el.id==='weekPick'){ui.week=Number(el.value);ui.editYogaId=null;if(workoutMode(ui.week,ui.day)==='yoga'){const planned=scheduledDate(ui.week,ui.day);ui.yogaDate=planned<=TODAY?planned:TODAY}render();return}
+if(el.id==='weekPick'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>12)return;ui.week=n;openWorkoutSlot();return}
 if(el.id==='dinnerCategory'){
  const select=document.getElementById('dinnerSubtype');
  if(select&&RECIPE_SUBTYPES[el.value])select.innerHTML=recipeSubtypeOptions(el.value);
  return
 }
-if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCycleId=el.value;ui.week=currentWeek();ui.editYogaId=null;const day=ui.day;if(workoutMode(ui.week,day)==='yoga'){const planned=scheduledDate(ui.week,day);ui.yogaDate=planned<=TODAY?planned:TODAY}save();render()}return}if(el.id==='routinePick'){
+if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCycleId=el.value;ui.week=currentWeek();save();openWorkoutSlot()}return}if(el.id==='routinePick'){
  if(!['tue','thu','fri'].includes(el.value))return;
  const existing=state.workouts[key(ui.week,ui.day)];
  if(existing&&(existing.completed||sessionHasLogs(existing))&&sessionRoutine(existing)!==el.value){
@@ -2323,7 +2332,7 @@ if(el.id==='cyclePick'){if(state.cycles.some(c=>c.id===el.value)){state.activeCy
  session.routineDay=el.value;
  save();render();return
 }
-if(el.id==='sessionDate'){ensureSession(ui.week,ui.day).date=el.value;save();return}
+if(el.id==='sessionDate'){if(!validCalendarDate(el.value))return;ensureSession(ui.week,ui.day).date=el.value;ui.workoutDate=el.value===TODAY?null:el.value;save();render();return}
 if(el.id==='foodDate'){if(validCalendarDate(el.value))setTabViewDate('food',el.value);return}
 if(el.id==='chartEx'){ui.chartEx=el.value;render();return}
 if(el.id==='importantShowOnlyToday'){el.dataset.userPicked='true';return}
@@ -2601,7 +2610,8 @@ function refreshTodayDate(){
  const prev=TODAY;TODAY=fresh;
  if(ui.foodDate===prev)ui.foodDate=fresh;
  if(ui.yogaDate===prev)ui.yogaDate=fresh;
- if(ui.tab==='home'||ui.tab==='lift')ui.week=currentWeek();
+ if(ui.tab==='home')ui.week=currentWeek();
+ if(ui.tab==='lift'&&(!ui.workoutDate||ui.workoutDate===prev)){ui.workoutDate=null;const match=workoutDateMatch(TODAY);if(match){ui.week=match.week;ui.day=match.day}}
  render();
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshTodayDate()});
