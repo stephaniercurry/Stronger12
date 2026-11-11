@@ -597,9 +597,10 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-compact-top .kicker{font-size:10px}
 .planner-compact-top .planner-new-buttons{display:flex;gap:6px}
 .planner-compact-top .planner-new-buttons .btn{min-height:34px;padding:6px 11px}
-.planner-compact-top .planner-new-buttons .planner-add-icon{width:36px;height:36px;min-height:36px;min-width:36px;padding:6px;display:grid;place-items:center;border-radius:10px}
-.planner-add-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.planner-entry-kind{margin:12px 0 4px}.planner-entry-kind select{max-width:240px;min-height:38px}
+.planner-compact-top .planner-new-buttons .planner-add-icon{position:relative;overflow:visible;width:40px;height:40px;min-height:40px;min-width:40px;padding:7px;display:grid;place-items:center;border-radius:10px}
+.planner-add-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.planner-add-icon .planner-icon-plus{position:absolute;left:0;top:50%;transform:translateY(-40%);width:21px;height:21px;display:grid;place-items:center;border:2px solid #fff;border-radius:50%;background:#f7b5c4;color:var(--forest);font-size:16px;line-height:1;font-weight:900;box-shadow:0 1px 4px rgba(24,30,55,.14)}
+.planner-entry-kind{margin:0 0 4px}.planner-entry-kind select{max-width:260px;min-height:38px}
 .planner-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0 10px}
 .planner-navigation label{font-size:12px;color:var(--muted);font-weight:750}
 .planner-navigation input[type=date]{min-height:36px;width:155px;font-size:14px;padding:6px 9px}
@@ -962,19 +963,22 @@ function plannerTasksForDate(date){
   .sort((a,b)=>Number(taskDone(a,date))-Number(taskDone(b,date))||
    (a.priority==='high'?-1:b.priority==='high'?1:0)||String(a.title||'').localeCompare(String(b.title||'')));
 }
-function plannerEntryKindSelector(){
- const kind=ui.plannerForm==='event'?'event':'task';
- return '<div class="field planner-entry-kind"><label for="plannerEntryKind">Add as</label>'+
- '<select id="plannerEntryKind" aria-label="Choose task or event">'+
- '<option value="task"'+(kind==='task'?' selected':'')+'>Task</option>'+
- '<option value="event"'+(kind==='event'?' selected':'')+'>Event</option></select></div>';
+function plannerEventTypeOptions(selected,includeTodo=true){
+ return (includeTodo?'<option value="todo"'+(selected==='todo'?' selected':'')+'>☑ To Do</option>':'')+
+  Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
+   '<option value="'+value+'"'+(value===selected?' selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('');
+}
+function plannerEventTypeSelector(selected='todo'){
+ return '<div class="field planner-entry-kind"><label for="importantType">Event type</label>'+
+  '<select id="importantType" name="type" aria-label="Event type">'+plannerEventTypeOptions(selected,true)+'</select></div>';
 }
 function plannerTaskForm(){
  const edit=state.tasks.find(t=>t.id===ui.editTaskId);
  if(ui.plannerForm!=='task'&&!edit)return '';
  return '<div class="important-calendar-form" id="plannerTaskEditor">'+
- '<h3>'+(edit?'Edit task':'Add to calendar')+'</h3>'+(edit?'':plannerEntryKindSelector())+'<p class="tiny">Tasks are things to finish; unfinished one-time tasks carry forward on Today.</p>'+
+ '<h3>'+(edit?'Edit task':'Add to calendar')+'</h3>'+
  '<form id="taskForm" class="stack" style="margin-top:14px">'+
+ (edit?'':plannerEventTypeSelector('todo'))+
  '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
  '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.plannerEntryDraft?.date||ui.importantDate)+'"></div>'+
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
@@ -1362,7 +1366,7 @@ function plannerLoadMore(){
 function importantDatesPanel(){
  const birthday=state.birthdays.find(b=>b.id===ui.editBirthdayId);
  const event=state.importantEvents.find(e=>e.id===ui.editImportantId);
- const editing=!!(birthday||event),type=birthday?'birthday':event?.type||'other';
+ const editing=!!(birthday||event),type=birthday?'birthday':event?.type||ui.plannerEntryDraft?.type||'other';
  const month=/^\d{4}-\d{2}$/.test(ui.importantMonth)&&validCalendarDate(ui.importantMonth+'-01')?ui.importantMonth:TODAY.slice(0,7);
  const chosen=validCalendarDate(ui.importantDate)&&ui.importantDate.slice(0,7)===month?ui.importantDate:month+'-01';
  const first=month+'-01',firstDate=dateOf(first);
@@ -1415,11 +1419,10 @@ function importantDatesPanel(){
   }).join('')+'</div></div>';
  const form=editing||ui.importantOpen||ui.plannerForm==='event'?
   '<div class="important-calendar-form" id="importantDatesDetails">'+
-  '<h3>'+(editing?(event?.repeat&&event.repeat!=='none'?'Edit repeating event':'Edit event'):'Add to calendar')+'</h3>'+(editing?'':plannerEntryKindSelector())+
-  '<p class="tiny" style="margin:0">Events can repeat; birthdays repeat annually.'+(event?.repeat&&event.repeat!=='none'?' Editing changes the entire series.':'')+'</p>'+
+  '<h3>'+(editing?(event?.repeat&&event.repeat!=='none'?'Edit repeating event':'Edit event'):'Add to calendar')+'</h3>'+
+  (editing?'<p class="tiny" style="margin:0">Events can repeat; birthdays repeat annually.'+(event?.repeat&&event.repeat!=='none'?' Editing changes the entire series.':'')+'</p>':'')+
   '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
-  '<div class="field"><label for="importantType">Event type</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
-   '<option value="'+value+'" '+(value===type?'selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('')+'</select></div>'+
+  '<div class="field planner-entry-kind"><label for="importantType">Event type</label><select name="type" id="importantType">'+plannerEventTypeOptions(type,!editing)+'</select></div>'+
   '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
   '<div class="inlinefields"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
   '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
@@ -1437,7 +1440,7 @@ function importantDatesPanel(){
  return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
  '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
  '<div class="planner-new-buttons"><button type="button" class="btn small primary planner-add-icon" data-planner-add="task" aria-label="Add task or event" title="Add task or event">'+
- '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M7 3v4M17 3v4M3 10h18M12 13v6M9 16h6"></path></svg></button></div></div>'+
+ '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M7 3v4M17 3v4M3 10h18"></path></svg><span class="planner-icon-plus" aria-hidden="true">+</span></button></div></div>'+
  '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
  '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
  '<div class="planner-calendar-shell">'+calendar+
@@ -2557,13 +2560,18 @@ document.addEventListener('touchend',ev=>{
 },{passive:false});
 document.addEventListener('input',ev=>{const el=ev.target;if(el.dataset.set){const s=ensureSession(ui.week,ui.day),id=el.dataset.ex,i=Number(el.dataset.idx),k=el.dataset.set;if(!s.sets[id])s.sets[id]=[{},{},{}];s.sets[id][i][k]=el.value;save();return}if(el.id==='sessionNotes'){ensureSession(ui.week,ui.day).notes=el.value;save()}});
 document.addEventListener('change',ev=>{const el=ev.target;
- if(el.id==='plannerEntryKind'){
-  if(!['task','event'].includes(el.value)||!['task','event'].includes(ui.plannerForm)||el.value===ui.plannerForm)return;
-  const title=document.getElementById(ui.plannerForm==='task'?'taskTitle':'importantTitle');
-  const date=document.getElementById(ui.plannerForm==='task'?'taskDue':'importantDate');
-  ui.plannerEntryDraft={title:title?.value||'',date:validCalendarDate(date?.value)?date.value:ui.importantDate};
-  ui.plannerForm=el.value;ui.editTaskId=null;ui.editImportantId=null;ui.editBirthdayId=null;ui.importantOpen=false;
-  render();document.getElementById('plannerEntryKind')?.focus({preventScroll:true});return
+ if(el.id==='importantType'&&!ui.editTaskId&&!ui.editImportantId&&!ui.editBirthdayId&&['task','event'].includes(ui.plannerForm)){
+  const choice=el.value;
+  const kind=choice==='todo'?'task':'event';
+  if(choice==='todo'||Object.hasOwn(IMPORTANT_TYPES,choice)){
+   if(kind!==ui.plannerForm){
+    const title=document.getElementById(ui.plannerForm==='task'?'taskTitle':'importantTitle');
+    const date=document.getElementById(ui.plannerForm==='task'?'taskDue':'importantDate');
+    ui.plannerEntryDraft={title:title?.value||'',date:validCalendarDate(date?.value)?date.value:ui.importantDate,type:choice==='todo'?'other':choice};
+    ui.plannerForm=kind;ui.importantOpen=false;
+    render();document.getElementById('importantType')?.focus({preventScroll:true});return
+   }
+  }
  }
 if(el.dataset.todayVisibility){
  const id=el.dataset.todayVisibility;
