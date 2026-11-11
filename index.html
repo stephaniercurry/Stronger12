@@ -724,7 +724,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1221,6 +1221,63 @@ function birthdayEditCalendarValue(b){
  const y=b.year||2024;
  return [y,String(b.month).padStart(2,'0'),String(b.day).padStart(2,'0')].join('-');
 }
+/* Progressive Planner agenda: only render the days reached while scrolling. */
+function plannerTaskCompact(task,day){
+ const done=taskDone(task,day),revealed=ui.swipedTaskId===task.id;
+ const info=[task.repeat&&task.repeat!=='none'?'↻ '+taskRepeatLabel(task):'',
+  task.priority==='high'?'Important':'',
+  (task.repeat||'none')==='none'&&task.due<day?'Carried forward':''].filter(Boolean).join(' · ');
+ return '<div class="task-swipe planner-mini-task'+(revealed?' is-revealed':'')+'" data-task-swipe="'+h(task.id)+'">'+
+  '<div class="task-swipe-actions"><button type="button" class="task-edit-reveal" data-task-edit="'+h(task.id)+'" tabindex="'+(revealed?'0':'-1')+'">Edit</button>'+
+  '<button type="button" class="task-delete-reveal" data-task-delete="'+h(task.id)+'" tabindex="'+(revealed?'0':'-1')+'">Delete</button></div>'+
+  '<div class="task-item'+(done?' is-done':'')+'">'+
+  '<button type="button" class="task-check" aria-label="'+h((done?'Mark incomplete: ':'Mark complete: ')+task.title)+'" aria-pressed="'+done+'" data-task-toggle="'+h(task.id)+'" data-task-date="'+h(day)+'">'+(done?'✓':'')+'</button>'+
+  '<div class="task-content"><strong>'+h(task.title)+'</strong>'+
+  (info?'<span class="planner-mini-meta">'+h(info)+'</span>':'')+
+  (task.notes?'<span class="planner-mini-note">'+h(task.notes)+'</span>':'')+'</div>'+
+  '<button type="button" class="task-more" data-task-reveal="'+h(task.id)+'" aria-expanded="'+revealed+'" aria-label="Edit or delete '+h(task.title)+'">···</button></div></div>';
+}
+function plannerEventCompact(e,day){
+ const unique=e.id+'@'+day,revealed=ui.selectedImportantId===unique,
+  type=IMPORTANT_TYPES[e.type]||IMPORTANT_TYPES.other;
+ const meta=[e.time?eventTimeDisplay(e.time)||e.time:'',e.type==='birthday'&&e.age!==null&&e.age>=0?'Turning '+e.age:'',
+  e.end>day?'Ends '+formatDate(e.end,{month:'short',day:'numeric'}):''].filter(Boolean).join(' · ');
+ return '<div class="task-swipe event-swipe planner-mini-event'+(revealed?' is-revealed':'')+'" data-event-swipe="'+h(unique)+'">'+
+  '<div class="task-swipe-actions"><button type="button" class="task-edit-reveal" data-important-edit="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'">Edit</button>'+
+  '<button type="button" class="task-delete-reveal" data-important-delete="'+h(e.id)+'" tabindex="'+(revealed?'0':'-1')+'">Delete</button></div>'+
+  '<div class="event-row"><span class="important-date-emoji" aria-hidden="true">'+type.emoji+'</span>'+
+  '<div class="important-date-copy"><strong>'+h(e.title)+'</strong>'+
+  (meta?'<span class="planner-mini-meta">'+h(meta)+'</span>':'')+
+  (e.notes?'<span class="planner-mini-note">'+h(e.notes)+'</span>':'')+'</div>'+
+  '<button type="button" class="task-more" data-important-reveal="'+h(unique)+'" aria-expanded="'+revealed+'" aria-label="Edit or delete '+h(e.title)+'">···</button></div></div>';
+}
+function plannerAgendaChunk(start,count){
+ if(!validCalendarDate(start)||!Number.isInteger(count)||count<1)return '';
+ const occurrences=importantOccurrences(start,count-1),parts=[];
+ for(let i=0;i<count;i++){
+  const day=addDays(start,i),
+   events=occurrences.filter(e=>e.start<=day&&e.end>=day),tasks=plannerTasksForDate(day);
+  const entries=[...events.map(e=>({order:'0'+(e.time||'99:99')+e.title,html:plannerEventCompact(e,day)})),
+   ...tasks.map((t,j)=>({order:'2'+String(j).padStart(4,'0'),html:plannerTaskCompact(t,day)}))]
+   .sort((a,b)=>String(a.order).localeCompare(String(b.order)));
+  parts.push('<section class="planner-date-group" data-agenda-date="'+day+'">'+
+   '<h3 class="planner-day-band'+(day===TODAY?' is-today':'')+'"><span>'+
+   h(formatDate(day,{weekday:'long',month:'short',day:'numeric',year:'numeric'}))+
+   (day===TODAY?' · Today':'')+'</span><small>'+entries.length+(entries.length===1?' item':' items')+'</small></h3>'+
+   (entries.length?'<div class="planner-compact-list">'+entries.map(x=>x.html).join('')+'</div>':
+   '<p class="planner-empty-day">No tasks or events</p>')+'</section>');
+ }
+ return parts.join('');
+}
+function plannerLoadMore(){
+ if(ui.tab!=='tasks'||!ui.plannerAgendaAnchor)return;
+ const target=document.getElementById('plannerAgendaDays');
+ if(!target)return;
+ const date=addDays(ui.plannerAgendaAnchor,ui.plannerAgendaCount);
+ if(date>'2099-12-17')return;
+ target.insertAdjacentHTML('beforeend',plannerAgendaChunk(date,14));
+ ui.plannerAgendaCount+=14;
+}
 function importantDatesPanel(){
  const birthday=state.birthdays.find(b=>b.id===ui.editBirthdayId);
  const event=state.importantEvents.find(e=>e.id===ui.editImportantId);
@@ -1240,6 +1297,7 @@ function importantDatesPanel(){
  const selectedWeekDays=event?eventWeeklyDays(event):[dateOf(chosenFormDate).getDay()];
  const hasRecurringDays=eventRepeat==='weekly'||eventRepeat==='biweekly';
  const showOnlyOnDay=event?event.showOnlyOnDay===true:type==='fitness';
+ if(ui.plannerAgendaAnchor!==chosen){ui.plannerAgendaAnchor=chosen;ui.plannerAgendaCount=14;ui.plannerResetScroll=true}
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
  const expanded=true;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
