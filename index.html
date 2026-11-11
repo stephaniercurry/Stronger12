@@ -2340,7 +2340,7 @@ if(b.dataset.importantDay){
  const date=b.dataset.importantDay;if(!validCalendarDate(date))return;
  ui.importantDate=date;ui.importantMonth=date.slice(0,7);
  ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
- render();document.getElementById('plannerDayAgenda')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+ render();return
 }
 if(b.dataset.importantNew){
  ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;ui.plannerForm='event';ui.editTaskId=null;
@@ -2572,7 +2572,7 @@ if(el.id==='plannerJumpDate'){
  ui.importantDate=el.value;ui.importantMonth=el.value.slice(0,7);
  ui.editTaskId=null;ui.editImportantId=null;ui.editBirthdayId=null;ui.importantOpen=false;ui.plannerForm=null;
  ui.selectedImportantId=null;ui.swipedTaskId=null;
- render();document.getElementById('plannerDayAgenda')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+ render();return
 }
 if(el.id==='homeDateInput'){
  if(validCalendarDate(el.value))setHomeViewDate(el.value);
