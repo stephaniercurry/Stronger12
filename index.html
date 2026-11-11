@@ -633,6 +633,34 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-scroll-end{display:flex;justify-content:center;padding:16px 0 8px}
 .planner-stream-hint{margin:4px 0 0!important;font-size:11px}
 @media(max-width:760px){.planner-main-card{padding:12px 10px}.planner-navigation .tiny{display:none}.planner-compact-top .planner-new-buttons{width:auto}.planner-compact-top .planner-new-buttons .btn{flex:initial}.planner-day-band{top:2px}.planner-navigation input[type=date]{width:144px}}
+
+/* Planner uses a permanent calendar above an independently scrolling agenda. */
+.planner-calendar-shell{border:1px solid #e0e9e4;background:#fafdfb;border-radius:12px;padding:10px 11px 6px;margin:0 0 10px}
+.planner-fixed-calendar{margin:0}
+.planner-fixed-calendar .important-calendar-top{margin-bottom:7px;flex-wrap:nowrap}
+.planner-fixed-calendar .important-calendar-month{font-size:14px;line-height:1.2}
+.planner-fixed-calendar .important-calendar-controls{gap:3px;flex:0 0 auto}
+.planner-fixed-calendar .important-calendar-controls .btn{min-height:32px;min-width:30px;padding:5px 8px;border-radius:8px;font-size:12px}
+.planner-fixed-calendar .important-calendar-grid{gap:3px}
+.planner-fixed-calendar .important-calendar-weekday{font-size:10px;padding:2px 0 5px}
+.planner-fixed-calendar .important-calendar-day{min-height:44px;padding:6px 2px 4px;gap:3px;border-radius:8px}
+.planner-fixed-calendar .important-calendar-day-number{font-size:12px;line-height:16px}
+.planner-fixed-calendar .important-calendar-marker{min-height:10px}
+.planner-month-expand{display:grid;place-items:center;width:32px;height:32px;border:1px solid #bfd6c9;border-radius:9px;background:#e7f3ed;color:#28634c;font-size:23px;font-weight:850;line-height:1;flex:0 0 32px}
+.planner-month-expand[aria-expanded="true"]{background:#d4ebdf}
+.planner-month-expand:focus-visible{outline:3px solid #79b4a4}
+.planner-calendar-shell .planner-legend{margin:8px 0 0;gap:12px}
+.planner-calendar-shell .planner-legend span{font-size:10px;gap:4px}
+.planner-scroll-agenda{margin-top:8px;height:clamp(320px,58dvh,810px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c4d8ce transparent;border:1px solid #e2e9e4;border-radius:11px;background:white;padding:5px}
+.planner-scroll-agenda .planner-day-band{top:0}
+.planner-scroll-end{padding-bottom:20px}
+@media(max-width:760px){
+ .planner-calendar-shell{padding:8px 7px 5px}
+ .planner-fixed-calendar .important-calendar-month{font-size:12px}
+ .planner-fixed-calendar .important-calendar-controls .btn{min-width:28px;min-height:30px;padding:4px 6px;font-size:11px}
+ .planner-month-expand{width:30px;height:30px;flex-basis:30px}
+ .planner-scroll-agenda{height:clamp(290px,52dvh,720px);padding:3px}
+}
 </style>
 </head>
 <body>
@@ -2025,25 +2053,23 @@ function renderNav(){const code=NAV.map(([id,icon,label])=>`<button data-tab="${
 let appFormTouched=false;
 let plannerAgendaObserver=null;
 function render(){
- const oldMonth=document.querySelector?.('.planner-month-details');
+ const oldAgenda=document.getElementById('plannerDayAgenda');
  const oldPlanner=document.getElementById('plannerAgendaSentinel');
  const oldAnchor=ui.plannerAgendaAnchor;
- const monthWasOpen=ui.tab==='tasks'&&!!oldMonth?.open;
- const scrollTop=ui.tab==='tasks'&&oldPlanner&&!ui.plannerResetScroll&&Number.isFinite(window.scrollY)?window.scrollY:null;
+ const agendaScroll=ui.tab==='tasks'&&oldPlanner&&!ui.plannerResetScroll?oldAgenda?.scrollTop||0:null;
  plannerAgendaObserver?.disconnect?.();
  appFormTouched=false;renderNav();
  document.getElementById('appView').innerHTML=taskUndoBanner()+({home:dashboard,tasks:tasksPage,lift,food,life:lifePage,settings}[ui.tab]||dashboard)();
  if(ui.tab==='tasks'){
-  const month=document.querySelector?.('.planner-month-details');
-  if(month&&monthWasOpen)month.open=true;
+  const agenda=document.getElementById('plannerDayAgenda');
   const sentinel=document.getElementById('plannerAgendaSentinel');
-  if(sentinel&&typeof IntersectionObserver!=='undefined'){
+  if(agenda&&sentinel&&typeof IntersectionObserver!=='undefined'){
    plannerAgendaObserver=new IntersectionObserver(entries=>{
     if(entries.some(x=>x.isIntersecting)&&ui.tab==='tasks')plannerLoadMore();
-   },{rootMargin:'400px 0px',threshold:0});
+   },{root:agenda,rootMargin:'240px 0px',threshold:0});
    plannerAgendaObserver.observe(sentinel);
   }
-  if(scrollTop!==null&&scrollTop>0&&oldAnchor===ui.plannerAgendaAnchor&&!ui.plannerResetScroll)window.scrollTo(0,scrollTop);
+  if(agenda&&agendaScroll!==null&&oldAnchor===ui.plannerAgendaAnchor&&!ui.plannerResetScroll)agenda.scrollTop=agendaScroll;
  }
  ui.plannerResetScroll=false;
  const tag=document.getElementById('savedStatus');
@@ -2281,15 +2307,24 @@ if(b.dataset.importantToggle){
  }
  render();return
 }
+if(b.dataset.plannerExpand){
+ ui.plannerMonthExpanded=!ui.plannerMonthExpanded;
+ render();return
+}
 if(b.dataset.importantMonthStep){
  const step=Number(b.dataset.importantMonthStep);
  if(step!==1&&step!==-1)return;
- const d=dateOf((ui.importantMonth||TODAY.slice(0,7))+'-01');
- d.setMonth(d.getMonth()+step);
- const target=iso(d).slice(0,7);
- const day=Number((ui.importantDate||TODAY).slice(8,10));
- const maximum=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
- ui.importantMonth=target;ui.importantDate=target+'-'+String(Math.min(day,maximum)).padStart(2,'0');
+ const current=validCalendarDate(ui.importantDate)?ui.importantDate:TODAY;
+ let date;
+ if(ui.plannerMonthExpanded){
+  const d=dateOf(current);
+  const selectedDay=d.getDate();
+  d.setDate(1);d.setMonth(d.getMonth()+step);
+  const maximum=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  d.setDate(Math.min(selectedDay,maximum));
+  date=iso(d);
+ }else date=addDays(current,step*7);
+ ui.importantDate=date;ui.importantMonth=date.slice(0,7);
  ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
  render();return
 }
