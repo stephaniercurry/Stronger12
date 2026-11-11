@@ -481,13 +481,16 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .event-clock-picker select{width:100%;min-width:0;padding:10px 7px;font-size:16px}
 #importantTimeField .field-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}
 /* Planner event editing: date controls never exceed the form, and time uses the entire row. */
-.planner-event-dates-row{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%;min-width:0}
-.planner-event-dates-row>.field{min-width:0;max-width:100%}
-.planner-event-dates-row input[type="date"]{display:block;box-sizing:border-box;min-width:0;width:100%;max-width:100%;padding:10px 8px;font-size:16px}
+#importantDateForm input:not([type="checkbox"]):not([type="radio"]),
+#importantDateForm select{height:46px;min-height:46px;max-height:46px;box-sizing:border-box}
+.planner-event-dates-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:100%;min-width:0}
+.planner-event-dates-row>.field{min-width:0;max-width:100%;overflow:hidden}
+#importantDateForm .planner-event-dates-row input[type="date"]{display:block;box-sizing:border-box;min-width:0;width:100%;max-width:100%;overflow:hidden;padding:6px 4px;font-size:16px;text-align:center}
+#importantDateForm .planner-event-dates-row input[type="date"]::-webkit-date-and-time-value{min-width:0;text-align:center}
 .planner-event-time-row{grid-template-columns:minmax(0,1fr);min-width:0}
 .planner-event-time-row>.field{min-width:0;width:100%;max-width:100%}
 .planner-event-time-row .event-clock-picker{width:100%;max-width:100%}
-@media(max-width:600px){.planner-event-dates-row{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.planner-event-dates-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 @media(max-width:430px){.event-clock-picker{gap:8px}.event-clock-picker select{padding:10px 5px}}
 
 /* App update banner: shown only when refreshing could interrupt editing. */
