@@ -563,6 +563,7 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .today-date-chooser input{width:160px;min-height:40px;font-size:16px}
 @media(max-width:430px){.today-date-area{margin-bottom:13px}.today-date-label{min-width:146px;font-size:12px}.today-date-arrow{width:41px;flex-basis:41px}.today-date-chooser{width:100%;gap:7px}.today-date-chooser label{width:100%;text-align:center}}
 .today-date-live-note{color:var(--muted);font-size:11px;line-height:1.35;text-align:center;max-width:95%}
+.workout-moved-date{margin:12px 0 0;padding:9px 11px;border-radius:10px;background:#eaf6f2;color:var(--ink);font-size:12px}
 </style>
 </head>
 <body>
@@ -1829,6 +1830,7 @@ function lift(){
  return head+'<section class="card span8" id="workoutSessionCard"><div class="session-header"><div><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+' · Cycle '+(activeCycleIndex()+1)+' · Week '+w+'</span>'+
  '<h2 style="margin:12px 0 4px">'+h(formatDate(date,{weekday:'long'}))+' — '+h(plan.title)+'</h2><p class="helper">'+h(plan.description)+' · 5-minute warm-up + 5 movements × 3 sets</p></div>'+
  (session.completed?'<span class="badgecomplete">✓ Completed</span>':'')+'</div>'+
+ (session.date&&session.date!==scheduledDate(w,d)?'<p class="tiny workout-moved-date">Viewing the '+h(formatDate(scheduledDate(w,d),{weekday:'long'}))+' routine on its rescheduled '+h(formatDate(session.date,{weekday:'long',month:'short',day:'numeric'}))+' training date.</p>':'')+
  '<div class="field" style="margin:15px 0"><label for="routinePick">Which strength routine?</label>'+
  '<select id="routinePick" aria-label="Select strength routine">'+
  [['tue','Full-body strength'],['thu','Upper body + core'],['fri','Lower body + glutes']].map(([id,label])=>'<option value="'+id+'" '+(routine===id?'selected':'')+'>'+label+'</option>').join('')+'</select>'+
@@ -1956,8 +1958,8 @@ if(mode){
   session.venue=mode;
  }else{
   ui.editYogaId=null;
-  const planned=scheduledDate(ui.week,ui.day);
-  ui.yogaDate=planned<=TODAY?planned:TODAY;
+  const selected=tabDate('lift');
+  ui.yogaDate=selected<=TODAY?selected:TODAY;
  }
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
