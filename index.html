@@ -902,8 +902,7 @@ function plannerTaskForm(){
  '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save changes':'Save task')+'</button><button type="button" class="btn" data-task-cancel="1">Cancel</button></div></form></div>';
 }
 function tasksPage(){
- return header('Planner','Choose a date, then see or add what needs your attention. Tasks and events live together here.')+
- '<div class="grid">'+importantDatesPanel()+'</div>';
+ return '<div class="grid">'+importantDatesPanel()+'</div>';
 }
 
 const CLASS_SUGGESTIONS=['Hot yoga','Yoga','Gentle / restorative','Pole','Dance','Pilates','Barre','Spin','Zumba','Other'];
@@ -1364,22 +1363,22 @@ function importantDatesPanel(){
   '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
   '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save event')+'</button>'+
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
- return '<section class="card span12" id="importantDatesSection">'+
- '<div class="row spread wrap"><div><div class="kicker">YOUR SCHEDULE</div><h2 style="margin:5px 0">Calendar</h2>'+
- '<p class="tiny" style="margin:0">'+state.tasks.length+' saved tasks · '+total+' saved events and birthdays</p></div></div>'+
- '<div class="important-panel-body">'+calendar+
- '<div class="planner-legend"><span><span class="important-calendar-dot task"></span> Tasks</span><span><span class="important-calendar-dot event"></span> Events & birthdays</span></div>'+
- '<div class="important-calendar-selected"><div class="important-calendar-selected-head"><div>'+
- '<h3>'+h(formatDate(chosen,{weekday:'long',month:'long',day:'numeric'}))+'</h3>'+
- '<p class="tiny">'+(entries.length+dayTasks.length)+' '+(entries.length+dayTasks.length===1?'item':'items')+' for this day</p></div>'+
+ return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
+ '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
  '<div class="planner-new-buttons"><button type="button" class="btn small primary" data-planner-add="task">+ Task</button>'+
  '<button type="button" class="btn small" data-planner-add="event">+ Event</button></div></div>'+
+ '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
+ '<button type="button" class="btn small" data-important-today="1">Today</button>'+
+ '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
+ '<details class="planner-month-details"><summary>▦ Month view · '+h(formatDate(first,{month:'long',year:'numeric'}))+'</summary>'+
+ calendar+'<div class="planner-legend"><span><span class="important-calendar-dot task"></span> Tasks</span>'+
+ '<span><span class="important-calendar-dot event"></span> Events & birthdays</span></div></details>'+
  plannerTaskForm()+form+
- '<div class="planner-day-group" id="plannerDayAgenda"><h4>Day agenda</h4>'+
- (agendaItems.length?'<div class="planner-unified-list">'+agenda+'</div>':
- '<p class="tiny planner-day-empty">Nothing planned for this date. Add a task or event whenever you are ready.</p>')+'</div>'+
- '<p class="fineprint" style="margin-top:15px">Tasks carry forward if unfinished. Events stay on their chosen dates. Your saved data remains private on this device and in backups.</p>'+
- '</div></section>';
+ '<div class="planner-scroll-agenda" id="plannerDayAgenda" aria-label="Calendar agenda by day">'+
+ '<div id="plannerAgendaDays">'+plannerAgendaChunk(chosen,ui.plannerAgendaCount)+'</div>'+
+ '<div class="planner-scroll-end" id="plannerAgendaSentinel"><button type="button" class="btn small" data-planner-more="1">Show more days ↓</button></div></div>'+
+ '<p class="tiny planner-stream-hint">Scroll for more days. Swipe left on an item, or tap ···, to edit or delete it.</p>'+
+ '</section>';
 }
 
 const RECIPE_CATEGORIES=[['dinner','Dinner'],['breakfast','Breakfast'],['dessert','Dessert']];
