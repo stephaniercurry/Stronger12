@@ -1436,7 +1436,7 @@ function importantDatesPanel(){
   '<div class="field event-today-only" id="importantTodayOnlyField"'+(type==='birthday'?' style="display:none"':'')+'>'+
   '<label class="event-today-only-label"><input id="importantShowOnlyToday" name="showOnlyOnDay" type="checkbox" '+(showOnlyOnDay?'checked':'')+'> <span><strong>Show only on the day of the event</strong><small>Hide future occurrences from Coming up on Today. Still visible in Planner.</small></span></label></div>'+
   '<div class="field" id="importantNotesField"'+(type==='birthday'?' style="display:none"':'')+'><label for="importantNotes">Details (optional)</label><textarea id="importantNotes" name="notes" rows="2" maxlength="600" placeholder="Venue, travel notes, plans…">'+h(event?.notes||'')+'</textarea></div>'+
-  '<div class="buttonrow"><button type="submit" class="btn primary">'+(editing?'Save changes':'Save event')+'</button>'+
+  '<div class="buttonrow"><button type="submit" class="btn primary">Save</button>'+
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
  return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
  '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
@@ -2824,7 +2824,7 @@ document.addEventListener('submit',ev=>{
     ui.importantDate=birthdayDate({month:Number(date.slice(5,7)),day:Number(date.slice(8,10))},visibleYear);
    }else ui.importantDate=date;
    ui.importantMonth=ui.importantDate.slice(0,7);
-   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;ui.plannerEntryDraft=null;save();render();return
+   ui.editBirthdayId=null;ui.editImportantId=null;ui.editTaskId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;ui.plannerEntryDraft=null;ui.plannerResetScroll=true;save();render();return
  }
  if(ev.target.id==='cycleForm'){
   ev.preventDefault();
