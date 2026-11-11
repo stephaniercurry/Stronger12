@@ -735,6 +735,8 @@ function workoutMode(w,day){
  if(['home','gym','yoga'].includes(saved))return saved;
  const logged=state.workouts[k];
  if(logged&&(logged.completed||sessionHasLogs(logged)))return logged.venue==='gym'?'gym':'home';
+ const selectedDate=ui.tab==='lift'&&ui.week===w&&ui.day===day&&validCalendarDate(ui.workoutDate)?ui.workoutDate:scheduledDate(w,day);
+ if(state.yogaSessions.some(y=>y.date===selectedDate))return 'yoga';
  return day==='mon'||day==='wed'?'yoga':logged?.venue==='gym'?'gym':'home';
 }
 function getSession(w,day){return state.workouts[key(w,day)]||{week:w,day,date:scheduledDate(w,day),cycleId:activeCycle().id,venue:'home',routineDay:defaultRoutineDay(day),sets:{},notes:'',completed:false}}
@@ -1687,8 +1689,8 @@ function workoutDayTabs(){
   return '<button type="button" data-day="'+id+'" class="chip '+(ui.day===id?'active':'')+'" aria-pressed="'+(ui.day===id)+'">'+label+((session?.completed||yoga)?' ✓':'')+'</button>';}).join('')+
  '</div><p class="tiny" style="margin:10px 0 0">Choose the day you trained, then select Home, Gym or Class. Pick the strength routine that fits your schedule.</p></section>';
 }
-function workoutModeCard(){
- const mode=workoutMode(ui.week,ui.day),session=state.workouts[key(ui.week,ui.day)];
+function workoutModeCard(overrideMode=null){
+ const mode=overrideMode||workoutMode(ui.week,ui.day),session=state.workouts[key(ui.week,ui.day)];
  return '<section class="card span12"><div class="row spread wrap"><div><div class="kicker">WORKOUT TYPE</div><h2 style="margin:6px 0">Train on this day at</h2></div><span class="tiny">'+h(formatDate(tabDate('lift'),{weekday:'long',month:'short',day:'numeric'}))+'</span></div>'+
  '<div class="venue-picker" role="group" aria-label="Choose home, gym or class">'+
  [['home','⌂ Home'],['gym','▣ Gym'],['yoga','☯ Class']].map(([id,label])=>'<button type="button" class="chip '+(mode===id?'active':'')+'" data-workout-mode="'+id+'" aria-pressed="'+(mode===id)+'">'+label+'</button>').join('')+'</div>'+
@@ -1786,8 +1788,8 @@ function completedWorkoutCard(session,plan){
  '<details class="workout-summary-preview"><summary>Preview summary</summary><pre>'+h(info.text)+'</pre></details>'+
  '</section>';
 }
-async function copyWorkoutSummaryText(text){
- const setStatus=msg=>{const node=document.getElementById('workoutCopyStatus');if(node)node.textContent=msg};
+async function copyWorkoutSummaryText(text,statusId='workoutCopyStatus'){
+ const setStatus=msg=>{const node=document.getElementById(statusId);if(node)node.textContent=msg};
  try{
   if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
   else{
@@ -1876,11 +1878,11 @@ function workoutOffDayView(date){
   '<section class="card span12 workout-offday"><span class="kicker">'+(inCycle?'RECOVERY DAY':'OUTSIDE CURRENT PLAN')+'</span>'+
   '<h2 style="margin:6px 0">'+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</h2>'+
   '<p class="tiny">'+h(reason)+'</p>'+
-  (hasYoga.length?'<p class="tiny">✓ Yoga logged: '+hasYoga.map(y=>h(y.kind||'Yoga')+' · '+h(y.minutes)+' min').join(' · ')+'</p>':'')+
+  (hasYoga.length?'<p class="tiny">✓ Classes completed: '+hasYoga.map(y=>h(y.kind||'Class')+' · '+h(y.minutes)+' min').join(' · ')+'</p>':'')+
   '<p class="tiny">Use the arrows to view another day, or select a training cycle below.</p></section>'+
   cycleControls();
  // Yoga can be logged on a weekend after it has happened; never pre-log a future class.
- if(date<=TODAY){ui.yogaDate=date;return head+yogaWorkoutCard()+'</div>'}
+ if(date<=TODAY){ui.yogaDate=date;return head+yogaWorkoutCard(date)+'</div>'}
  return head+'</div>';
 }
 function lift(){
@@ -1888,11 +1890,12 @@ function lift(){
  if(!matching)return workoutOffDayView(date);
  const w=matching.week,d=matching.day;
  ui.week=w;ui.day=d;
- const mode=workoutMode(w,d),ph=phase(w),head=sectionDateBar('lift')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard();
- if(mode==='yoga')return head+(date<=TODAY?yogaWorkoutCard():'<section class="card span7"><div class="kicker">PLANNED MOVEMENT</div><h2 style="margin:8px 0">Yoga on '+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</h2><p class="tiny">You can plan ahead here. Return on or after this date to log a class you attended.</p></section>')+
- '<section class="card span5"><div class="kicker">YOGA</div><h2 style="margin:8px 0">'+h(formatDate(date,{weekday:'long'}))+' · Yoga</h2>'+
- '<p>'+(date<=TODAY?'Log yoga on the day you attended, including a past day.':'Your yoga session can be logged after it happens.')+'</p>'+
- '<div class="notice">Your yoga history is independent of the 12-week strength cycles. Any saved strength workout for this day is preserved.</div><div class="divider"></div><h3>Your weekly rhythm</h3>'+weeklyCalendar()+'</section></div>';
+ const editingClass=state.yogaSessions.some(y=>y.id===ui.editYogaId&&y.date===date);
+ const mode=editingClass?'yoga':workoutMode(w,d),ph=phase(w),head=sectionDateBar('lift')+'<div class="grid">'+cycleControls()+workoutDayTabs()+workoutModeCard(mode);
+ if(mode==='yoga')return head+(date<=TODAY?yogaWorkoutCard(date):'<section class="card span7"><div class="kicker">PLANNED MOVEMENT</div><h2 style="margin:8px 0">Class on '+h(formatDate(date,{weekday:'long',month:'short',day:'numeric'}))+'</h2><p class="tiny">Plan ahead here, then return on or after the date to log the class you attended.</p></section>')+
+ '<section class="card span5"><div class="kicker">CLASSES</div><h2 style="margin:8px 0">Move your way</h2>'+
+ '<p>'+(date<=TODAY?'Log yoga, pole, dance or any class on the day you attended.':'Come back after the class to record it.')+'</p>'+
+ '<div class="notice">Class history is saved independently of strength cycles. Any strength workout on the same date remains available.</div><div class="divider"></div><h3>Your weekly rhythm</h3>'+weeklyCalendar()+'</section></div>';
  const session=getSession(w,d),routine=sessionRoutine(session),plan=planFor(routine,mode),c=activeCycle();
  if(session.completed&&ui.openCompletedWorkoutKey!==key(w,d))return head+completedWorkoutCard(session,plan)+'</div>';
  return head+'<section class="card span8" id="workoutSessionCard"><div class="session-header"><div><span class="phase '+(ph.recovery?'recovery':'')+'">'+h(ph.short)+' · Cycle '+(activeCycleIndex()+1)+' · Week '+w+'</span>'+
@@ -2028,6 +2031,7 @@ if(mode){
   ui.editYogaId=null;
   const selected=tabDate('lift');
   ui.yogaDate=selected<=TODAY?selected:TODAY;
+  ui.newClassFormDate=null;
  }
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
@@ -2233,9 +2237,39 @@ if(b.dataset.importantDelete){
 if(b.dataset.birthdayEdit){ui.editBirthdayId=b.dataset.birthdayEdit;ui.tab='tasks';ui.plannerForm='event';render();window.scrollTo(0,0);return}
 if(b.dataset.birthdayCancel){ui.editBirthdayId=null;render();return}
 if(b.dataset.birthdayDelete){const i=state.birthdays.findIndex(x=>x.id===b.dataset.birthdayDelete);if(i>=0&&confirm('Remove '+state.birthdays[i].name+' from birthdays?')){state.birthdays.splice(i,1);if(ui.editBirthdayId===b.dataset.birthdayDelete)ui.editBirthdayId=null;save();render()}return}
-if(b.dataset.yogaEdit){ui.editYogaId=b.dataset.yogaEdit;ui.tab='lift';render();window.scrollTo(0,0);return}
-if(b.dataset.yogaCancel){ui.editYogaId=null;render();return}
-if(b.dataset.yogaDelete){const i=state.yogaSessions.findIndex(y=>y.id===b.dataset.yogaDelete);if(i>=0&&confirm('Delete this yoga entry?')){state.yogaSessions.splice(i,1);if(ui.editYogaId===b.dataset.yogaDelete)ui.editYogaId=null;save();render()}return}
+if(b.dataset.classCopy){
+ const entry=state.yogaSessions.find(y=>y.id===b.dataset.classCopy);
+ if(entry)copyWorkoutSummaryText(classSummaryText(entry),'classCopyStatus-'+entry.id);
+ return
+}
+if(b.dataset.classEdit||b.dataset.yogaEdit){
+ const id=b.dataset.classEdit||b.dataset.yogaEdit;
+ const entry=state.yogaSessions.find(y=>y.id===id);
+ if(!entry)return;
+ ui.tab='lift';ui.workoutDate=entry.date===TODAY?null:entry.date;
+ ui.workoutDatePickerOpen=false;ui.newClassFormDate=null;ui.editYogaId=id;ui.yogaDate=entry.date;
+ const matching=workoutDateMatch(entry.date);
+ if(matching){ui.week=matching.week;ui.day=matching.day}
+ render();document.getElementById('yogaForm')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
+}
+if(b.dataset.classNew){
+ const date=tabDate('lift');
+ if(date>TODAY)return;
+ ui.newClassFormDate=date;ui.editYogaId=null;
+ render();document.getElementById('yogaForm')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
+}
+if(b.dataset.classCancel||b.dataset.yogaCancel){
+ ui.editYogaId=null;ui.newClassFormDate=null;render();return
+}
+if(b.dataset.classDelete||b.dataset.yogaDelete){
+ const id=b.dataset.classDelete||b.dataset.yogaDelete;
+ const entry=state.yogaSessions.find(y=>y.id===id);
+ if(!entry||!confirm('Delete '+(entry.kind||'this class')+' on '+formatDate(entry.date)+'?'))return;
+ state.yogaSessions=state.yogaSessions.filter(y=>y.id!==id);
+ if(ui.editYogaId===id)ui.editYogaId=null;
+ ui.newClassFormDate=null;save();render();return
+}
+
 if(b.dataset.weekFoodToggle){ui.weekFoodOpen=!ui.weekFoodOpen;render();return}
 if(b.dataset.weekIdeaToggle){
  const id=b.dataset.weekIdeaToggle;
@@ -2629,16 +2663,29 @@ document.addEventListener('submit',ev=>{
   ui.editBirthdayId=null;save();render();return
  }
  if(ev.target.id==='yogaForm'){
-  ev.preventDefault();
-  const fd=new FormData(ev.target),date=String(fd.get('date')||''),minutes=Number(fd.get('minutes')),kind=String(fd.get('kind')||'Yoga'),notes=String(fd.get('notes')||'').trim();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||iso(dateOf(date))!==date||date>TODAY||!Number.isInteger(minutes)||minutes<1||minutes>600||!YOGA_KINDS.includes(kind)){alert('Choose an actual yoga date (today or earlier) and a duration from 1 to 600 minutes.');return}
-  const patch={date,minutes,kind,notes};
-  const existing=state.yogaSessions.find(x=>x.id===ui.editYogaId);
-  if(existing)Object.assign(existing,patch);
-  else state.yogaSessions.push({id:uid(),...patch,createdAt:new Date().toISOString()});
-  ui.editYogaId=null;ui.yogaDate=scheduledDate(ui.week,ui.day)<=TODAY?scheduledDate(ui.week,ui.day):TODAY;save();render();return
+ ev.preventDefault();
+ const fd=new FormData(ev.target),date=String(fd.get('date')||''),
+  minutes=Number(fd.get('minutes')),kind=String(fd.get('kind')||'').trim(),
+  notes=String(fd.get('notes')||'').trim();
+ if(!validCalendarDate(date)||date>TODAY||!Number.isInteger(minutes)||minutes<1||minutes>600||
+  !kind||kind.length>80||notes.length>300){
+  alert('Enter an actual class date (today or earlier), activity name, and duration from 1 to 600 minutes.');return
  }
- if(ev.target.id==='weekFoodQuickForm'){
+ const patch={date,minutes,kind,notes};
+ const existing=state.yogaSessions.find(x=>x.id===ui.editYogaId);
+ if(existing)Object.assign(existing,patch);
+ else state.yogaSessions.push({id:uid(),...patch,createdAt:new Date().toISOString()});
+ ui.editYogaId=null;ui.newClassFormDate=null;
+ ui.yogaDate=date;
+ // Keep the existing strength workout and class on the same day independent.
+ if(ui.tab==='lift'){
+  const match=workoutDateMatch(date);
+  if(match){ui.week=match.week;ui.day=match.day}
+  ui.workoutDate=date===TODAY?null:date;
+ }
+ save();render();return
+}
+if(ev.target.id==='weekFoodQuickForm'){
   ev.preventDefault();
   const name=String(new FormData(ev.target).get('name')||'').trim();
   if(!name||name.length>140){alert('Enter a short food idea.');return}
