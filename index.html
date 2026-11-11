@@ -1389,7 +1389,7 @@ function agendaTodayCard(date=TODAY){
  const nextPanel=next&&!nextIsShown?
    '<div class="next-holiday"><div class="kicker">NEXT PAGAN HOLIDAY · '+h(daysBetween(date,next.date))+' DAYS AWAY</div>'+
    holidayRow(next)+'</div>':'';
- return '<section class="card span12 today-calendar-card"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div><button class="btn small" data-important-open="1">Open Planner →</button></div>'+
+ return '<section class="card span12 today-calendar-card"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div></div>'+
  '<div class="agenda-cols"><div><h3>'+(date===TODAY?'Today':'Selected day')+'</h3>'+(today.length?todayShown.map(row).join(''):'<p class="tiny">Nothing scheduled for this day.</p>')+'</div>'+
  '<div><h3>Coming up · next 7 days</h3>'+(week.length?weekShown.map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
  nextPanel+
