@@ -768,7 +768,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1331,8 +1331,12 @@ function importantDatesPanel(){
  const lastDate=new Date(firstDate.getFullYear(),firstDate.getMonth()+1,0,12);
  const gridStart=addDays(first,-firstDate.getDay());
  const gridEnd=addDays(iso(lastDate),6-lastDate.getDay());
- const days=Array.from({length:daysBetween(gridStart,gridEnd)+1},(_,i)=>addDays(gridStart,i));
- const occurrences=importantOccurrences(gridStart,daysBetween(gridStart,gridEnd));
+ const weekStart=addDays(chosen,-dateOf(chosen).getDay());
+ const weekEnd=addDays(weekStart,6);
+ const days=ui.plannerMonthExpanded?
+  Array.from({length:daysBetween(gridStart,gridEnd)+1},(_,i)=>addDays(gridStart,i)):
+  Array.from({length:7},(_,i)=>addDays(weekStart,i));
+ const occurrences=importantOccurrences(ui.plannerMonthExpanded?gridStart:weekStart,ui.plannerMonthExpanded?daysBetween(gridStart,gridEnd):6);
  const onDate=date=>occurrences.filter(e=>e.start<=date&&e.end>=date);
  const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||chosen;
  const eventRepeat=Object.hasOwn(EVENT_REPEATS,event?.repeat)?event.repeat:'none';
@@ -1342,11 +1346,16 @@ function importantDatesPanel(){
  if(ui.plannerAgendaAnchor!==chosen){ui.plannerAgendaAnchor=chosen;ui.plannerAgendaCount=14;ui.plannerResetScroll=true}
  const total=state.birthdays.length+state.importantEvents.filter(e=>e&&validCalendarDate(e.start)).length;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
- const calendar='<div class="important-calendar" aria-label="Planner calendar">'+
-  '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(formatDate(first,{month:'long',year:'numeric'}))+'</h3>'+
-  '<div class="important-calendar-controls"><button type="button" class="btn small" data-important-month-step="-1" aria-label="Previous month">‹</button>'+
+ const visibleLabel=ui.plannerMonthExpanded?
+  formatDate(first,{month:'long',year:'numeric'}):
+  formatDate(weekStart,{month:'short',day:'numeric'})+'–'+formatDate(weekEnd,{day:'numeric',month:weekStart.slice(0,7)===weekEnd.slice(0,7)?undefined:'short',year:'numeric'});
+ const calendar='<div class="important-calendar planner-fixed-calendar" aria-label="Planner '+(ui.plannerMonthExpanded?'month':'week')+' calendar">'+
+  '<div class="important-calendar-top"><h3 class="important-calendar-month">'+h(visibleLabel)+'</h3>'+
+  '<div class="important-calendar-controls">'+
+  '<button type="button" class="btn small" data-important-month-step="-1" aria-label="Previous '+(ui.plannerMonthExpanded?'month':'week')+'">‹</button>'+
   '<button type="button" class="btn small" data-important-today="1">Today</button>'+
-  '<button type="button" class="btn small" data-important-month-step="1" aria-label="Next month">›</button></div></div>'+
+  '<button type="button" class="btn small" data-important-month-step="1" aria-label="Next '+(ui.plannerMonthExpanded?'month':'week')+'">›</button>'+
+  '<button type="button" class="planner-month-expand" data-planner-expand="1" aria-expanded="'+ui.plannerMonthExpanded+'" aria-label="'+(ui.plannerMonthExpanded?'Show one week':'Show entire month')+'" title="'+(ui.plannerMonthExpanded?'Collapse to week':'Expand to month')+'">'+(ui.plannerMonthExpanded?'⌃':'⌄')+'</button></div></div>'+
   '<div class="important-calendar-grid">'+
   weekdays.map(w=>'<div class="important-calendar-weekday" aria-hidden="true">'+w+'</div>').join('')+
   days.map(date=>{
@@ -1390,9 +1399,9 @@ function importantDatesPanel(){
  '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
  '<button type="button" class="btn small" data-important-today="1">Today</button>'+
  '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
- '<details class="planner-month-details"><summary>▦ Month view · '+h(formatDate(first,{month:'long',year:'numeric'}))+'</summary>'+
- calendar+'<div class="planner-legend"><span><span class="important-calendar-dot task"></span> Tasks</span>'+
- '<span><span class="important-calendar-dot event"></span> Events & birthdays</span></div></details>'+
+ '<div class="planner-calendar-shell">'+calendar+
+ '<div class="planner-legend"><span><span class="important-calendar-dot task"></span> Tasks</span>'+
+ '<span><span class="important-calendar-dot event"></span> Events & birthdays</span></div></div>'+
  plannerTaskForm()+form+
  '<div class="planner-scroll-agenda" id="plannerDayAgenda" aria-label="Calendar agenda by day">'+
  '<div id="plannerAgendaDays">'+plannerAgendaChunk(chosen,ui.plannerAgendaCount)+'</div>'+
