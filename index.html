@@ -548,10 +548,29 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 
 /* One-tap spending directly from the Today money card. */
 .money-today-envelope.is-selected{border-color:#2c9595;background:#eaf6f4;box-shadow:0 0 0 1px #77b6b2}
-.money-today-spend-form{background:#f7fbfa;border:1px solid #cce5e2;border-radius:13px;padding:13px;margin:0 0 15px}
-.money-today-spend-form h3{margin:0;font-size:15px}
-.money-today-spend-form .tiny{margin:0}
-.money-today-spend-form input{font-size:16px}
+/* The selected envelope itself expands across the grid; following tiles reflow. */
+.money-today-envelopes>.money-today-envelope.is-expanded{
+ grid-column:1 / -1;display:block;min-width:0;padding:12px 13px;
+ background:#eaf6f4;border-color:#2c9595;box-shadow:0 0 0 1px #77b6b2
+}
+.money-today-expanded-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:0;width:100%;min-width:0;background:transparent;border:0;
+ text-align:left;color:var(--ink)
+}
+.money-today-expanded-heading:focus-visible{outline:3px solid #80bcc0;outline-offset:3px;border-radius:7px}
+.money-today-expanded-summary{display:flex;flex-direction:column;gap:4px;min-width:0}
+.money-today-expanded-summary span{font-size:12px;color:var(--muted);font-weight:700;overflow-wrap:anywhere}
+.money-today-expanded-summary strong{font-size:19px;font-weight:850}
+.money-today-collapse{font-size:22px;color:#25787c;line-height:1;padding:0 5px}
+.money-today-spend-form{
+ min-width:0;width:100%;margin:11px 0 0;padding:11px 0 0;border:0;
+ border-top:1px solid #b4d7d4;border-radius:0;background:transparent
+}
+.money-today-spend-form .field{min-width:0}
+.money-today-spend-form input{width:100%;min-width:0;font-size:16px}
+.money-today-spend-form .buttonrow{gap:8px;flex-wrap:wrap}
+.money-today-spend-form .buttonrow .btn{min-height:40px;padding:8px 11px;font-size:13px}
 .money-today-confirm{padding:8px 10px;background:#eaf6ef;border-radius:8px;color:#316854;margin:10px 0 0}
 
 .rest-timer-card{position:sticky;top:8px;z-index:12;margin:14px 0 18px;padding:12px 13px;border:1px solid #afd7d2;border-radius:15px;background:#edf9f6;box-shadow:0 4px 16px rgba(23,68,61,.1)}
@@ -1857,20 +1876,27 @@ function yogaProgressCard(){
 
 function moneyTodayCard(){
  const spend=state.moneyEnvelopes.filter(x=>x.kind!=='save'),total=spend.reduce((sum,x)=>sum+moneyBalance(x),0);
- const preview=spend.slice(0,4),selected=spend.find(x=>x.id===ui.todaySpendId&&moneyBalance(x)>0);
+ const preview=spend.slice(0,4);
+ const spendFields=()=>'<form id="moneyTodaySpendForm" class="stack money-today-spend-form">'+
+  '<div class="field"><label for="todaySpendAmount">Amount ($)</label><input type="number" inputmode="decimal" id="todaySpendAmount" name="amount" min="0.01" step="0.01" placeholder="0.00" required></div>'+
+  '<div class="field"><label for="todaySpendNote">What was it for? (optional)</label><input id="todaySpendNote" type="text" name="note" maxlength="140" placeholder="Coffee, lunch…"></div>'+
+  '<div class="buttonrow"><button type="submit" class="btn primary">Record spending</button><button type="button" class="btn" data-money-today-cancel="1">Cancel</button></div></form>';
+ const envelopeTile=x=>{
+  const balance=moneyBalance(x),expanded=ui.todaySpendId===x.id&&balance>0;
+  const summary='<span>'+h(x.name)+'</span><strong>'+moneyText(balance)+'</strong>';
+  if(expanded)return '<div class="money-today-envelope is-selected is-expanded">'+
+   '<button type="button" class="money-today-expanded-heading" data-money-shortcut="'+h(x.id)+'" aria-expanded="true" aria-label="Close spending form for '+h(x.name)+'">'+
+   '<span class="money-today-expanded-summary">'+summary+'</span><span class="money-today-collapse" aria-hidden="true">⌃</span></button>'+
+   spendFields()+'</div>';
+  return '<button class="money-today-envelope" type="button" data-money-shortcut="'+h(x.id)+'" aria-expanded="false" aria-label="'+h(x.name)+': '+moneyText(balance)+'. Tap to '+(balance>0?'record spending':'add money')+'">'+
+   summary+'</button>';
+ };
  return '<section class="card span7 money-today-card">'+
   '<div class="row spread wrap"><div><div class="kicker">READY TO ENJOY</div><h2 style="margin:5px 0">Money to spend</h2></div>'+
   (spend.length?'<span class="money-today-total">'+moneyText(total)+'</span>':'')+'</div>'+
   (ui.todayMoneyMessage?'<p class="tiny money-today-confirm" role="status">'+h(ui.todayMoneyMessage)+'</p>':'')+
-  (preview.length?'<div class="money-today-envelopes">'+preview.map(x=>
-   '<button class="money-today-envelope'+(ui.todaySpendId===x.id?' is-selected':'')+'" type="button" data-money-shortcut="'+h(x.id)+'" aria-pressed="'+(ui.todaySpendId===x.id)+'" aria-label="'+h(x.name)+': '+moneyText(moneyBalance(x))+'. Tap to '+(moneyBalance(x)>0?'record spending':'add money')+'">'+
-   '<span>'+h(x.name)+'</span><strong>'+moneyText(moneyBalance(x))+'</strong></button>').join('')+'</div>':
+  (preview.length?'<div class="money-today-envelopes">'+preview.map(envelopeTile).join('')+'</div>':
    '<p class="tiny money-today-empty">Give a little spending money its own envelope, and know what’s yours to enjoy.</p>')+
-  (selected?'<form id="moneyTodaySpendForm" class="stack money-today-spend-form">'+
-   '<h3>Spend from '+h(selected.name)+'</h3><p class="tiny">'+moneyText(moneyBalance(selected))+' available</p>'+
-   '<div class="field"><label for="todaySpendAmount">Amount ($)</label><input type="number" inputmode="decimal" id="todaySpendAmount" name="amount" min="0.01" step="0.01" placeholder="0.00" required></div>'+
-   '<div class="field"><label for="todaySpendNote">What was it for? (optional)</label><input id="todaySpendNote" type="text" name="note" maxlength="140" placeholder="Coffee, lunch…"></div>'+
-   '<div class="buttonrow"><button type="submit" class="btn primary">Record spending</button><button type="button" class="btn" data-money-today-cancel="1">Cancel</button></div></form>':'')+
   (spend.length>preview.length?'<p class="tiny" style="margin:10px 0 0">+'+(spend.length-preview.length)+' more envelopes in Life</p>':'')+
   '<button class="btn small" data-money-open="1">'+(spend.length?'Open envelopes →':'Set up envelopes →')+'</button>'+
  '</section>';
