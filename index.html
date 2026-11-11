@@ -1029,7 +1029,7 @@ function homeTasksForDate(date){
 }
 function taskSummary(date=TODAY){
  const all=homeTasksForDate(date),done=all.filter(t=>taskDone(t,date)).length;
- return '<section class="card span12 today-tasks-card"><div class="row spread wrap"><div><div class="kicker">MY DAY</div><h2 style="margin:7px 0 3px">'+(date===TODAY?'What matters today':'Tasks for this day')+'</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished one-time tasks carry forward</p></div><button class="btn small" data-tab="tasks">Open Planner →</button></div>'+
+ return '<section class="card span12 today-tasks-card"><div class="row spread wrap"><div><div class="kicker">MY DAY</div><h2 style="margin:7px 0 3px">'+(date===TODAY?'What matters today':'Tasks for this day')+'</h2><p class="tiny" style="margin:0">'+done+' of '+all.length+' tasks complete · unfinished one-time tasks carry forward</p></div></div>'+
  '<form id="quickTaskForm" class="task-quick"><input type="text" name="title" maxlength="140" required aria-label="Quick add task" placeholder="'+(date===TODAY?'Add something for today…':'Add something for this day…')+'"><button type="submit" class="btn primary">+ Add</button></form>'+
  '<div class="task-list">'+(all.length?all.slice(0,5).map(t=>taskItem(t,true,date)).join(''):'<div class="empty">Nothing on your list yet. Add one thing you want to accomplish today.</div>')+'</div>'+
  (all.length>5?'<button class="btn small" style="margin-top:12px" data-tab="tasks">See all '+all.length+' tasks →</button>':'')+'</section>';
