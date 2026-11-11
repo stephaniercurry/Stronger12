@@ -746,6 +746,32 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .today-calendar-card .next-holiday{margin-top:9px;padding:9px 11px;border-radius:11px}
 .today-calendar-card .next-holiday .agenda-event{padding:5px 0 0}
 .today-calendar-card>.fineprint{font-size:10px;line-height:1.4;margin-top:9px!important}
+/* Compact celebratory nutrition rings on Today; Weekly rhythm stays in Workout. */
+.today-grid>.today-nutrition-card{padding:16px 17px 15px;display:grid;gap:12px}
+.today-nutrition-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;z-index:1}
+.today-nutrition-head h2{font-size:20px;line-height:1.25;margin:0}
+.today-nutrition-head .btn{min-height:32px;padding:6px 10px;border-radius:11px;font-size:12px;white-space:nowrap}
+.today-nutrition-rings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;position:relative;z-index:1}
+.today-nutrition-stat{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
+.today-nutrition-ring{position:relative;width:94px;height:94px;flex:0 0 94px}
+.today-nutrition-ring svg{width:100%;height:100%;display:block;overflow:visible}
+.today-nutrition-ring circle{fill:none;stroke-width:9}
+.today-nutrition-ring .nutrition-ring-track{stroke:rgba(255,255,255,.17)}
+.today-nutrition-ring .nutrition-ring-progress{stroke:var(--ring-color);stroke-linecap:round;transition:stroke-dasharray .25s ease}
+.today-nutrition-stat.protein{--ring-color:#95dbd8}
+.today-nutrition-stat.fiber{--ring-color:#f2a7c1}
+.today-nutrition-ring-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;line-height:1.1}
+.today-nutrition-number{font-size:23px;font-weight:850;letter-spacing:-.7px;color:#fff;font-variant-numeric:tabular-nums}
+.today-nutrition-goal{font-size:11px;color:#d6dcee;margin-top:4px;font-weight:650}
+.today-nutrition-label{display:flex;align-items:center;gap:5px;color:#fff;font-size:13px;font-weight:750}
+.today-nutrition-done{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--ring-color);color:#243352;font-size:13px;font-weight:900}
+@media(max-width:450px){
+ .today-grid>.today-nutrition-card{padding:14px 13px;gap:10px}
+ .today-nutrition-stat{gap:6px;flex-direction:column}
+ .today-nutrition-ring{width:88px;height:88px;flex-basis:88px}
+ .today-nutrition-number{font-size:22px}
+ .today-nutrition-label{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -1854,7 +1880,6 @@ const TODAY_SECTIONS=[
  ['tasks','Tasks','Your to-do list and quick add'],
  ['calendar','Calendar','Today and upcoming events'],
  ['foodIdeas','Food ideas','Your current meal shortlist'],
- ['workouts','Weekly workouts','Your training rhythm'],
  ['nutrition','Protein & fiber','Your daily nutrition targets'],
  ['shopping','Shopping list','Groceries you still need'],
  ['money','Money to spend','Your spending envelopes']
@@ -1876,14 +1901,38 @@ function todayCustomizationCard(){
  '<p class="fineprint" style="margin:14px 0 0">Hidden sections still work in other tabs, and nothing is deleted. Your choices are saved with your backup.</p>'+
  '</section>';
 }
+function todayNutritionRing(label,value,goal,kind){
+ const amount=Number.isFinite(Number(value))?Math.max(0,Number(value)):0;
+ const target=Number.isFinite(Number(goal))?Math.max(0,Number(goal)):0;
+ const fraction=target>0?Math.min(1,amount/target):0;
+ const circumference=2*Math.PI*40;
+ const progress=(fraction*circumference).toFixed(2);
+ const complete=target>0&&amount>=target;
+ return '<div class="today-nutrition-stat '+kind+'" role="group" aria-label="'+h(label)+' '+h(fmt(amount,1))+' of '+h(fmt(target,1))+' grams">'+
+  '<div class="today-nutrition-ring"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">'+
+  '<circle class="nutrition-ring-track" cx="50" cy="50" r="40"></circle>'+
+  '<circle class="nutrition-ring-progress" cx="50" cy="50" r="40" transform="rotate(-90 50 50)" stroke-dasharray="'+progress+' '+circumference.toFixed(2)+'"></circle></svg>'+
+  '<div class="today-nutrition-ring-center"><strong class="today-nutrition-number">'+h(fmt(amount,1))+'</strong>'+
+  '<span class="today-nutrition-goal">/ '+h(fmt(target,1))+'g</span></div></div>'+
+  '<div class="today-nutrition-label">'+h(label)+(complete?'<span class="today-nutrition-done" aria-label="Goal reached">✓</span>':'')+'</div></div>';
+}
+function todayNutritionCard(date,totals){
+ const title=date===TODAY?'Today’s nutrition':'Nutrition for this day';
+ return '<section class="card dark span12 today-nutrition-card" aria-label="'+title+'">'+
+  '<div class="today-nutrition-head"><h2>'+title+'</h2>'+
+  '<button type="button" class="btn solidlight" data-tab="food">Log food →</button></div>'+
+  '<div class="today-nutrition-rings">'+
+  todayNutritionRing('Protein',totals.protein,state.settings.proteinGoal,'protein')+
+  todayNutritionRing('Fiber',totals.fiber,state.settings.fiberGoal,'fiber')+
+  '</div></section>';
+}
 function dashboard(){
- const date=homeViewDate(),t=dailyTotals(date),different=date!==TODAY;
+ const date=homeViewDate(),t=dailyTotals(date);
  const cards=[
   ['tasks',()=>taskSummary(date)],
   ['calendar',()=>agendaTodayCard(date)],
   ['foodIdeas',()=>weekFoodTodayCard()],
-  ['workouts',()=>`<section class="card dark span7"><h2 style="font-size:22px;margin:0 0 16px">Weekly rhythm</h2>${weeklyCalendar(date)}<div class="buttonrow" style="margin-top:18px"><button class="btn solidlight" data-tab="lift">Open workouts →</button></div></section>`],
-  ['nutrition',()=>`<section class="card span5"><div class="row spread"><div class="kicker">${different?'Nutrition for this day':"Today's nutrition"}</div></div><div style="margin-top:15px"><div class="daily-row"><span>Protein</span><strong>${fmt(t.protein,1)} <small>/ ${fmt(state.settings.proteinGoal)}g</small></strong></div>${prog(t.protein,state.settings.proteinGoal)}<div class="daily-row"><span>Fiber</span><strong>${fmt(t.fiber,1)} <small>/ ${fmt(state.settings.fiberGoal)}g</small></strong></div>${prog(t.fiber,state.settings.fiberGoal,'fiber')}</div><button class="btn small" data-tab="food">Log food →</button></section>`],
+  ['nutrition',()=>todayNutritionCard(date,t)],
   ['shopping',()=>groceryTodayCard()],
   ['money',()=>moneyTodayCard()]
  ];
