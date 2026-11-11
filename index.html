@@ -589,6 +589,50 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .class-history summary{font-size:13px;font-weight:750;cursor:pointer}
 .class-history .yoga-log{margin-top:12px}
 @media(max-width:430px){.class-completed-item{padding:10px}.class-completed-item .completed-workout-actions{display:grid}.class-completed-item .completed-workout-actions button{width:100%}}
+
+/* Streamlined day-by-day Planner timeline. */
+.planner-main-card{padding:17px 16px}
+.planner-compact-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.planner-compact-top h2{margin:1px 0 0;font-size:21px;line-height:1.2}
+.planner-compact-top .kicker{font-size:10px}
+.planner-compact-top .planner-new-buttons{display:flex;gap:6px}
+.planner-compact-top .planner-new-buttons .btn{min-height:34px;padding:6px 11px}
+.planner-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0 10px}
+.planner-navigation label{font-size:12px;color:var(--muted);font-weight:750}
+.planner-navigation input[type=date]{min-height:36px;width:155px;font-size:14px;padding:6px 9px}
+.planner-navigation .btn{min-height:34px}
+.planner-navigation .tiny{margin-left:auto;font-size:11px}
+.planner-month-details{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin:0 0 9px}
+.planner-month-details>summary{font-size:12px;font-weight:750;color:var(--green);cursor:pointer}
+.planner-month-details .important-calendar{margin:9px 0 0}
+.planner-month-details .important-calendar-day{min-height:43px;padding:5px 2px 3px;gap:2px}
+.planner-month-details .important-calendar-day-number{font-size:12px}
+.planner-month-details .important-calendar-grid{gap:3px}
+.planner-month-details .important-calendar-weekday{padding:2px 0 4px}
+.planner-scroll-agenda{margin-top:10px}
+.planner-date-group{margin:0;padding:0 0 7px}
+.planner-day-band{position:sticky;top:0;z-index:12;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;padding:8px 10px;border:1px solid #dbe8e5;border-radius:9px;background:#eef4f1;color:#22554c;font-size:13px;font-weight:850;line-height:1.3;box-shadow:0 2px 4px rgba(28,63,52,.04)}
+.planner-day-band.is-today{background:#d5efe6;border-color:#99cbb9}
+.planner-day-band small{font-size:10px;white-space:nowrap;color:#628076;font-weight:650}
+.planner-compact-list{padding:3px 2px 4px;display:grid;gap:2px}
+.planner-empty-day{font-size:11px;color:#8a9993;padding:6px 12px;margin:0}
+.planner-scroll-agenda .task-swipe{border:1px solid #e9efed;border-radius:8px;min-width:0}
+.planner-scroll-agenda .planner-mini-task .task-item{display:flex;align-items:center;flex-wrap:nowrap;gap:9px;min-height:39px;padding:5px 8px}
+.planner-scroll-agenda .task-check{width:24px;height:24px;flex:0 0 24px;border-width:1.5px;border-radius:7px;font-size:14px}
+.planner-scroll-agenda .task-content{min-width:0;display:grid;gap:1px}
+.planner-scroll-agenda .task-content strong,.planner-scroll-agenda .important-date-copy strong{font-size:13px;line-height:1.25}
+.planner-scroll-agenda .task-more{min-height:31px;min-width:30px;font-size:17px;flex:0 0 30px}
+.planner-scroll-agenda .planner-mini-event .event-row{display:flex;align-items:center;gap:9px;min-height:39px;padding:5px 8px;border-radius:7px;background:#f8fbfc}
+.planner-scroll-agenda .planner-mini-event .important-date-emoji{font-size:17px;line-height:1;flex:0 0 24px;text-align:center}
+.planner-scroll-agenda .important-date-copy{min-width:0;display:grid;gap:1px}
+.planner-mini-meta{font-size:10px;color:#71827c;line-height:1.2}
+.planner-mini-note{font-size:10px;color:#778780;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.planner-scroll-agenda .task-swipe-actions{width:134px}
+.planner-scroll-agenda .task-edit-reveal,.planner-scroll-agenda .task-delete-reveal{font-size:12px}
+.planner-scroll-agenda .task-swipe.is-revealed .task-item,.planner-scroll-agenda .event-swipe.is-revealed .event-row{transform:translateX(-134px)}
+.planner-scroll-end{display:flex;justify-content:center;padding:16px 0 8px}
+.planner-stream-hint{margin:4px 0 0!important;font-size:11px}
+@media(max-width:760px){.planner-main-card{padding:12px 10px}.planner-navigation .tiny{display:none}.planner-compact-top .planner-new-buttons{width:auto}.planner-compact-top .planner-new-buttons .btn{flex:initial}.planner-day-band{top:2px}.planner-navigation input[type=date]{width:144px}}
 </style>
 </head>
 <body>
@@ -1994,7 +2038,30 @@ function settings(){return header('Make it yours.','Adjust your goals and progra
 <section class="card span12"><h2>Training notes & safety</h2><p class="fineprint">This is a general strength-training template, not medical clearance or an individualized rehabilitation plan. Each session can be Home or Gym; both use three sets per exercise. The starting plan uses dumbbells, stable furniture, and rings; it assumes those are available and can be modified to fit your equipment. Begin with loads that allow controlled movement. On painful back days, stop or modify the aggravating exercise. New or progressive weakness, numbness around the groin, or changes in bladder/bowel control warrant urgent medical evaluation. Program progression uses rep ranges and effort; it is not a requirement to increase weight every week.</p><p class="tiny">Protein/fiber values in quick add are approximate. RIR means “repetitions in reserve”: how many more clean reps you believe you could have performed.</p></section></div>`}
 function renderNav(){const code=NAV.map(([id,icon,label])=>`<button data-tab="${id}" class="${ui.tab===id?'active':''}" aria-current="${ui.tab===id?'page':'false'}"><span class="sym">${icon}</span>${label}</button>`).join('');document.getElementById('desktopNav').innerHTML=code;document.getElementById('mobileNav').innerHTML=code}
 let appFormTouched=false;
-function render(){appFormTouched=false;renderNav();document.getElementById('appView').innerHTML=taskUndoBanner()+({home:dashboard,tasks:tasksPage,lift,food,life:lifePage,settings}[ui.tab]||dashboard)();const tag=document.getElementById('savedStatus');if(tag)tag.textContent=storageFailed?'⚠ This browser could not save data':state.lastSavedAt?'✓ Last saved on this device '+new Date(state.lastSavedAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Ready to save locally';}
+let plannerAgendaObserver=null;
+function render(){
+ const oldMonth=document.querySelector?.('.planner-month-details');
+ const monthWasOpen=ui.tab==='tasks'&&!!oldMonth?.open;
+ const scrollTop=ui.tab==='tasks'&&!ui.plannerResetScroll&&Number.isFinite(window.scrollY)?window.scrollY:null;
+ plannerAgendaObserver?.disconnect?.();
+ appFormTouched=false;renderNav();
+ document.getElementById('appView').innerHTML=taskUndoBanner()+({home:dashboard,tasks:tasksPage,lift,food,life:lifePage,settings}[ui.tab]||dashboard)();
+ if(ui.tab==='tasks'){
+  const month=document.querySelector?.('.planner-month-details');
+  if(month&&monthWasOpen)month.open=true;
+  const sentinel=document.getElementById('plannerAgendaSentinel');
+  if(sentinel&&typeof IntersectionObserver!=='undefined'){
+   plannerAgendaObserver=new IntersectionObserver(entries=>{
+    if(entries.some(x=>x.isIntersecting)&&ui.tab==='tasks')plannerLoadMore();
+   },{rootMargin:'400px 0px',threshold:0});
+   plannerAgendaObserver.observe(sentinel);
+  }
+  if(scrollTop!==null&&scrollTop>0)window.scrollTo(0,scrollTop);
+ }
+ ui.plannerResetScroll=false;
+ const tag=document.getElementById('savedStatus');
+ if(tag)tag.textContent=storageFailed?'⚠ This browser could not save data':state.lastSavedAt?'✓ Last saved on this device '+new Date(state.lastSavedAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Ready to save locally';
+}
 function dl(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function csvCell(x){return '"'+String(x??'').replace(/"/g,'""')+'"'}
 function backupFile(){return new File([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],'stronger12-backup-'+TODAY+'.json',{type:'application/json'})}
@@ -2211,6 +2278,7 @@ if(b.dataset.moneyAction){
  ui.moneyOpen=true;ui.moneySelectedId=x.id;ui.moneyEditId=null;ui.moneyNew=false;
  ui.moneyAction={type,id:x.id};ui.moneyMessage='';render();return
 }
+if(b.dataset.plannerMore){plannerLoadMore();return}
 if(b.dataset.plannerAdd){
  if(!['task','event'].includes(b.dataset.plannerAdd))return;
  ui.plannerForm=b.dataset.plannerAdd;ui.editTaskId=null;ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
@@ -2247,14 +2315,14 @@ if(b.dataset.importantDay){
  const date=b.dataset.importantDay;if(!validCalendarDate(date))return;
  ui.importantDate=date;ui.importantMonth=date.slice(0,7);
  ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;ui.editTaskId=null;ui.plannerForm=null;
- render();return
+ render();document.getElementById('plannerDayAgenda')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
 }
 if(b.dataset.importantNew){
  ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=true;ui.importantPanelOpen=true;ui.plannerForm='event';ui.editTaskId=null;
  render();document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
 }
 if(b.dataset.importantReveal){
- const raw=String(b.dataset.importantReveal),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
+ const raw=String(b.dataset.importantReveal),base=raw.split('@')[0],split=base.indexOf(':'),kind=base.slice(0,split),id=base.slice(split+1);
  if(split<0)return;
  if(kind==='birthday'&&!state.birthdays.some(x=>x.id===id))return;
  if(kind!=='birthday'&&!state.importantEvents.some(x=>x.id===id))return;
@@ -2473,6 +2541,13 @@ if(el.id==='foodDateJump'&&ui.tab==='food'){
 if(el.id==='liftDateJump'&&ui.tab==='lift'){
  if(validCalendarDate(el.value))setTabViewDate('lift',el.value);
  return
+}
+if(el.id==='plannerJumpDate'){
+ if(!validCalendarDate(el.value))return;
+ ui.importantDate=el.value;ui.importantMonth=el.value.slice(0,7);
+ ui.editTaskId=null;ui.editImportantId=null;ui.editBirthdayId=null;ui.importantOpen=false;ui.plannerForm=null;
+ ui.selectedImportantId=null;ui.swipedTaskId=null;
+ render();document.getElementById('plannerDayAgenda')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
 }
 if(el.id==='homeDateInput'){
  if(validCalendarDate(el.value))setHomeViewDate(el.value);
