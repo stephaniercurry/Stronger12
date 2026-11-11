@@ -364,7 +364,7 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
  .important-calendar-form{padding:13px}
 }
 
-/* Planner: two kinds of calendar entries, two separate creation buttons. */
+/* Planner: one compact add action with task/event creation modes. */
 .important-calendar-dot.task{background:#268d96}
 .important-calendar-dot.event{background:#cf809c}
 .planner-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:11px 0}
@@ -597,6 +597,9 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-compact-top .kicker{font-size:10px}
 .planner-compact-top .planner-new-buttons{display:flex;gap:6px}
 .planner-compact-top .planner-new-buttons .btn{min-height:34px;padding:6px 11px}
+.planner-compact-top .planner-new-buttons .planner-add-icon{width:36px;height:36px;min-height:36px;min-width:36px;padding:6px;display:grid;place-items:center;border-radius:10px}
+.planner-add-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.planner-entry-kind{margin:12px 0 4px}.planner-entry-kind select{max-width:240px;min-height:38px}
 .planner-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0 10px}
 .planner-navigation label{font-size:12px;color:var(--muted);font-weight:750}
 .planner-navigation input[type=date]{min-height:36px;width:155px;font-size:14px;padding:6px 9px}
@@ -796,7 +799,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -959,14 +962,21 @@ function plannerTasksForDate(date){
   .sort((a,b)=>Number(taskDone(a,date))-Number(taskDone(b,date))||
    (a.priority==='high'?-1:b.priority==='high'?1:0)||String(a.title||'').localeCompare(String(b.title||'')));
 }
+function plannerEntryKindSelector(){
+ const kind=ui.plannerForm==='event'?'event':'task';
+ return '<div class="field planner-entry-kind"><label for="plannerEntryKind">Add as</label>'+
+ '<select id="plannerEntryKind" aria-label="Choose task or event">'+
+ '<option value="task"'+(kind==='task'?' selected':'')+'>Task</option>'+
+ '<option value="event"'+(kind==='event'?' selected':'')+'>Event</option></select></div>';
+}
 function plannerTaskForm(){
  const edit=state.tasks.find(t=>t.id===ui.editTaskId);
  if(ui.plannerForm!=='task'&&!edit)return '';
  return '<div class="important-calendar-form" id="plannerTaskEditor">'+
- '<h3>'+(edit?'Edit task':'Add task')+'</h3><p class="tiny">Tasks are things to finish; unfinished one-time tasks carry forward on Today.</p>'+
+ '<h3>'+(edit?'Edit task':'Add to calendar')+'</h3>'+(edit?'':plannerEntryKindSelector())+'<p class="tiny">Tasks are things to finish; unfinished one-time tasks carry forward on Today.</p>'+
  '<form id="taskForm" class="stack" style="margin-top:14px">'+
- '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||'')+'"></div>'+
- '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.importantDate)+'"></div>'+
+ '<div class="field"><label for="taskTitle">Task</label><input id="taskTitle" name="title" maxlength="140" required placeholder="What needs doing?" value="'+h(edit?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
+ '<div class="inlinefields"><div class="field"><label for="taskDue">Due date</label><input id="taskDue" type="date" name="due" required value="'+h(edit?.due||ui.plannerEntryDraft?.date||ui.importantDate)+'"></div>'+
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
  '<div class="field"><label for="taskRepeat">Repeat</label><select id="taskRepeat" name="repeat">'+Object.entries(TASK_REPEATS).map(([value,label])=>'<option value="'+value+'" '+((edit?.repeat||'none')===value?'selected':'')+'>'+h(label)+'</option>').join('')+'</select></div>'+
  '<div class="field task-interval-field" id="taskIntervalField" '+((edit?.repeat||'none')==='interval'?'':'style="display:none"')+'><label for="taskIntervalDays">Repeat every how many days?</label><input id="taskIntervalDays" name="repeatDays" type="number" inputmode="numeric" min="1" max="365" step="1" value="'+h(edit?.repeatDays||3)+'" '+((edit?.repeat||'none')==='interval'?'required':'')+'><small class="tiny">Starts on the due date, then repeats every N calendar days.</small></div>'+
@@ -1366,7 +1376,7 @@ function importantDatesPanel(){
   Array.from({length:7},(_,i)=>addDays(weekStart,i));
  const occurrences=importantOccurrences(ui.plannerMonthExpanded?gridStart:weekStart,ui.plannerMonthExpanded?daysBetween(gridStart,gridEnd):6);
  const onDate=date=>occurrences.filter(e=>e.start<=date&&e.end>=date);
- const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||chosen;
+ const chosenFormDate=birthday?birthdayEditCalendarValue(birthday):event?.start||ui.plannerEntryDraft?.date||chosen;
  const eventRepeat=Object.hasOwn(EVENT_REPEATS,event?.repeat)?event.repeat:'none';
  const selectedWeekDays=event?eventWeeklyDays(event):[dateOf(chosenFormDate).getDay()];
  const hasRecurringDays=eventRepeat==='weekly'||eventRepeat==='biweekly';
@@ -1405,12 +1415,12 @@ function importantDatesPanel(){
   }).join('')+'</div></div>';
  const form=editing||ui.importantOpen||ui.plannerForm==='event'?
   '<div class="important-calendar-form" id="importantDatesDetails">'+
-  '<h3>'+(editing?(event?.repeat&&event.repeat!=='none'?'Edit repeating event':'Edit event'):'Add event or birthday')+'</h3>'+
+  '<h3>'+(editing?(event?.repeat&&event.repeat!=='none'?'Edit repeating event':'Edit event'):'Add to calendar')+'</h3>'+(editing?'':plannerEntryKindSelector())+
   '<p class="tiny" style="margin:0">Events can repeat; birthdays repeat annually.'+(event?.repeat&&event.repeat!=='none'?' Editing changes the entire series.':'')+'</p>'+
   '<form id="importantDateForm" class="stack" style="margin-top:16px">'+
   '<div class="field"><label for="importantType">Event type</label><select name="type" id="importantType">'+Object.entries(IMPORTANT_TYPES).map(([value,obj])=>
    '<option value="'+value+'" '+(value===type?'selected':'')+'>'+obj.emoji+' '+obj.label+'</option>').join('')+'</select></div>'+
-  '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||'')+'"></div>'+
+  '<div class="field"><label for="importantTitle">Activity or person</label><input id="importantTitle" name="title" required maxlength="140" placeholder="What is happening?" value="'+h(birthday?.name||event?.title||ui.plannerEntryDraft?.title||'')+'"></div>'+
   '<div class="inlinefields"><div class="field"><label for="importantDate">Start date</label><input type="date" name="date" id="importantDate" required value="'+h(chosenFormDate)+'"></div>'+
   '<div class="field" id="importantEndField"'+(type==='birthday'||eventRepeat!=='none'?' style="display:none"':'')+'><label for="importantEndDate">End date (optional)</label><input type="date" name="endDate" id="importantEndDate" value="'+h(event?.end||'')+'"></div></div>'+
   '<div class="inlinefields"><div class="field" id="importantTimeField"'+(type==='birthday'?' style="display:none"':'')+'><span class="field-label">Time (optional)</span>'+eventTimePicker(event?.time||'')+'</div>'+
@@ -1426,8 +1436,8 @@ function importantDatesPanel(){
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
  return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
  '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
- '<div class="planner-new-buttons"><button type="button" class="btn small primary" data-planner-add="task">+ Task</button>'+
- '<button type="button" class="btn small" data-planner-add="event">+ Event</button></div></div>'+
+ '<div class="planner-new-buttons"><button type="button" class="btn small primary planner-add-icon" data-planner-add="task" aria-label="Add task or event" title="Add task or event">'+
+ '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M7 3v4M17 3v4M3 10h18M12 13v6M9 16h6"></path></svg></button></div></div>'+
  '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
  '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
  '<div class="planner-calendar-shell">'+calendar+
@@ -2297,9 +2307,9 @@ if(b.dataset.moneyAction){
 if(b.dataset.plannerMore){plannerLoadMore();return}
 if(b.dataset.plannerAdd){
  if(!['task','event'].includes(b.dataset.plannerAdd))return;
- ui.plannerForm=b.dataset.plannerAdd;ui.editTaskId=null;ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
+ ui.plannerForm=b.dataset.plannerAdd;ui.plannerEntryDraft=null;ui.editTaskId=null;ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;ui.selectedImportantId=null;
  render();
- document.getElementById(ui.plannerForm==='task'?'plannerTaskEditor':'importantDatesDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+ document.getElementById(ui.plannerForm==='task'?'plannerTaskEditor':'importantDatesDetails')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});
  return
 }
 if(b.dataset.importantToggle){
@@ -2368,7 +2378,7 @@ if(b.dataset.importantEdit){
  document.getElementById('importantDatesDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
 }
-if(b.dataset.importantCancel){ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;render();return}
+if(b.dataset.importantCancel){ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;ui.plannerEntryDraft=null;render();return}
 if(b.dataset.importantDelete){
  const raw=String(b.dataset.importantDelete),split=raw.indexOf(':'),kind=raw.slice(0,split),id=raw.slice(split+1);
  if(split<0)return;
@@ -2516,7 +2526,7 @@ if(b.dataset.taskToggle){
 }
 if(b.dataset.taskFilter){ui.taskFilter=b.dataset.taskFilter;render();return}
 if(b.dataset.taskEdit){const t=state.tasks.find(x=>x.id===b.dataset.taskEdit);if(!t)return;ui.tab='tasks';ui.editTaskId=t.id;ui.plannerForm='task';ui.editBirthdayId=null;ui.editImportantId=null;ui.importantOpen=false;if(validCalendarDate(t.due)){ui.importantDate=t.due;ui.importantMonth=t.due.slice(0,7)}render();document.getElementById('plannerTaskEditor')?.scrollIntoView?.({block:'start',behavior:'smooth'});return}
-if(b.dataset.taskCancel){ui.editTaskId=null;ui.plannerForm=null;render();return}
+if(b.dataset.taskCancel){ui.editTaskId=null;ui.plannerForm=null;ui.plannerEntryDraft=null;render();return}
 if(b.dataset.taskTomorrow){const t=state.tasks.find(x=>x.id===b.dataset.taskTomorrow);if(t){t.due=addDays(TODAY,1);save();render()}return}
 if(b.dataset.taskDelete){const i=state.tasks.findIndex(x=>x.id===b.dataset.taskDelete);if(i>=0){ui.deletedTask={task:state.tasks[i],index:i};state.tasks.splice(i,1);if(ui.editTaskId===ui.deletedTask.task.id)ui.editTaskId=null;ui.swipedTaskId=null;save();render()}return}
 if(b.dataset.print){window.print();return}});
@@ -2547,6 +2557,14 @@ document.addEventListener('touchend',ev=>{
 },{passive:false});
 document.addEventListener('input',ev=>{const el=ev.target;if(el.dataset.set){const s=ensureSession(ui.week,ui.day),id=el.dataset.ex,i=Number(el.dataset.idx),k=el.dataset.set;if(!s.sets[id])s.sets[id]=[{},{},{}];s.sets[id][i][k]=el.value;save();return}if(el.id==='sessionNotes'){ensureSession(ui.week,ui.day).notes=el.value;save()}});
 document.addEventListener('change',ev=>{const el=ev.target;
+ if(el.id==='plannerEntryKind'){
+  if(!['task','event'].includes(el.value)||!['task','event'].includes(ui.plannerForm)||el.value===ui.plannerForm)return;
+  const title=document.getElementById(ui.plannerForm==='task'?'taskTitle':'importantTitle');
+  const date=document.getElementById(ui.plannerForm==='task'?'taskDue':'importantDate');
+  ui.plannerEntryDraft={title:title?.value||'',date:validCalendarDate(date?.value)?date.value:ui.importantDate};
+  ui.plannerForm=el.value;ui.editTaskId=null;ui.editImportantId=null;ui.editBirthdayId=null;ui.importantOpen=false;
+  render();document.getElementById('plannerEntryKind')?.focus({preventScroll:true});return
+ }
 if(el.dataset.todayVisibility){
  const id=el.dataset.todayVisibility;
  if(!TODAY_SECTIONS.some(([key])=>key===id))return;
@@ -2797,7 +2815,7 @@ document.addEventListener('submit',ev=>{
     ui.importantDate=birthdayDate({month:Number(date.slice(5,7)),day:Number(date.slice(8,10))},visibleYear);
    }else ui.importantDate=date;
    ui.importantMonth=ui.importantDate.slice(0,7);
-   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;save();render();return
+   ui.editBirthdayId=null;ui.editImportantId=null;ui.selectedImportantId=null;ui.importantOpen=false;ui.plannerForm=null;ui.plannerEntryDraft=null;save();render();return
  }
  if(ev.target.id==='cycleForm'){
   ev.preventDefault();
@@ -2878,7 +2896,7 @@ if(ev.target.id==='weekFoodQuickForm'){
    if(existing.repeat!==repeat||existing.due!==due||Number(existing.repeatDays||0)!==Number(repeatDays||0)){if((existing.repeat||'none')!=='none'&&Array.isArray(existing.completedDates)){existing.completedDates=[]}}
    Object.assign(existing,patch);
   }else state.tasks.push({id:uid(),...patch,createdAt:new Date().toISOString(),done:false,doneAt:null,completedDates:[]});
-  if(!quick){ui.importantDate=due;ui.importantMonth=due.slice(0,7);ui.plannerForm=null}
+  if(!quick){ui.importantDate=due;ui.importantMonth=due.slice(0,7);ui.plannerForm=null;ui.plannerEntryDraft=null}
   ui.editTaskId=null;save();render();return
  }
  if(ev.target.id==='foodForm'){ev.preventDefault();const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),protein=Number(fd.get('protein')),fiber=Number(fd.get('fiber'));if(!name||!Number.isFinite(protein)||protein<0||!Number.isFinite(fiber)||fiber<0){alert('Enter a food name and valid protein/fiber amounts.');return}state.foods.push({id:uid(),date:ui.foodDate,meal:String(fd.get('meal')),name,protein,fiber});save();render();return}if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
