@@ -597,9 +597,10 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-compact-top .kicker{font-size:10px}
 .planner-compact-top .planner-new-buttons{display:flex;gap:6px}
 .planner-compact-top .planner-new-buttons .btn{min-height:34px;padding:6px 11px}
-.planner-compact-top .planner-new-buttons .planner-add-icon{position:relative;overflow:visible;width:40px;height:40px;min-height:40px;min-width:40px;padding:7px;display:grid;place-items:center;border-radius:10px}
-.planner-add-icon svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.planner-compact-top .planner-new-buttons .planner-add-icon{color:#fff}
+.planner-compact-top .planner-new-buttons .planner-add-icon{position:relative;overflow:visible;width:40px;height:40px;min-height:40px;min-width:40px;padding:7px;display:grid;place-items:center;border:0;border-radius:10px;background:transparent;color:var(--forest);box-shadow:none}
+.planner-compact-top .planner-new-buttons .planner-add-icon:hover{background:transparent;color:var(--forest)}
+.planner-add-icon svg{width:34px;height:34px;fill:none;stroke:var(--forest);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.planner-compact-top .planner-new-buttons .planner-add-icon{color:var(--forest)}
 .planner-entry-kind{margin:0 0 4px}.planner-entry-kind select{max-width:260px;min-height:38px}
 .planner-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 0 10px}
 .planner-navigation label{font-size:12px;color:var(--muted);font-weight:750}
@@ -1439,7 +1440,7 @@ function importantDatesPanel(){
   '<button type="button" class="btn" data-important-cancel="1">Cancel</button></div></form></div>':'';
  return '<section class="card span12 planner-main-card" id="importantDatesSection">'+
  '<div class="planner-compact-top"><div><span class="kicker">YOUR SCHEDULE</span><h2>Planner</h2></div>'+
- '<div class="planner-new-buttons"><button type="button" class="btn small primary planner-add-icon" data-planner-add="task" aria-label="Add task or event" title="Add task or event">'+
+ '<div class="planner-new-buttons"><button type="button" class="btn small planner-add-icon" data-planner-add="task" aria-label="Add task or event" title="Add task or event">'+
  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"></path><path d="M16 2v4M8 2v4M3 10h18M16 19h6M19 16v6"></path></svg></button></div></div>'+
  '<div class="planner-navigation"><label for="plannerJumpDate">Jump to</label><input type="date" id="plannerJumpDate" value="'+h(chosen)+'" aria-label="Jump to planner date">'+
  '<span class="tiny">'+state.tasks.length+' tasks · '+total+' events</span></div>'+
