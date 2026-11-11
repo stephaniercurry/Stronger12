@@ -791,6 +791,38 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
  .today-nutrition-number{font-size:22px}
  .today-nutrition-label{font-size:12px}
 }
+/* Today: tapping the item count opens a compact, in-place shopping checklist. */
+.today-grocery-card .row.spread{gap:8px;align-items:center}
+.today-grocery-toggle{
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;
+ border:1px solid #c9e8e4;min-height:35px;padding:6px 10px;
+ color:#216e72;background:#e8f5f3;cursor:pointer;white-space:nowrap;
+ font-size:12px;font-weight:750;flex:0 0 auto
+}
+.today-grocery-toggle:focus-visible,.today-grocery-bought-toggle:focus-visible,.today-grocery-item:focus-visible{
+ outline:3px solid #71bdbe;outline-offset:2px
+}
+.today-grocery-checklist{display:grid;gap:0;margin:9px 0 12px;min-width:0;border-top:1px solid #e1e7ed}
+.today-grocery-item{
+ display:flex;align-items:center;gap:10px;text-align:left;width:100%;
+ min-height:41px;min-width:0;padding:7px 4px;background:transparent;
+ border:0;border-bottom:1px solid #eef0f4;color:var(--ink)
+}
+.today-grocery-item .today-grocery-box{
+ display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;
+ border:1.5px solid #72b7b7;border-radius:8px;color:white;font-size:17px;font-weight:800
+}
+.today-grocery-item.is-bought .today-grocery-box{background:var(--green);border-color:var(--green)}
+.today-grocery-name{min-width:0;font-size:13px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.today-grocery-name small{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:1px}
+.today-grocery-item.is-bought .today-grocery-name{text-decoration:line-through;color:var(--muted)}
+.today-grocery-empty{margin:10px 0}
+.today-grocery-bought-toggle{
+ justify-self:start;background:transparent;border:0;padding:8px 3px 2px;
+ color:var(--green);font-size:12px;font-weight:750;text-align:left
+}
+.today-grocery-bought-list{display:grid;gap:0}
+@media(max-width:380px){.today-grocery-toggle{font-size:11px;padding:5px 8px}.today-grocery-card .row.spread h2{font-size:19px}}
 </style>
 </head>
 <body>
@@ -926,7 +958,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1216,10 +1248,19 @@ async function shareGroceries(copyOnly=false){
  else alert(message);
 }
 function groceryTodayCard(){
- const open=groceryNeeds();
- return '<section class="card span5"><div class="row spread"><div><div class="kicker">GROCERIES</div><h2 style="margin:6px 0">Shopping list</h2></div><span class="pill">'+open.length+' to buy</span></div>'+
- (open.length?'<p class="tiny">'+open.slice(0,4).map(x=>h(x.name)).join(' · ')+(open.length>4?' · …':'')+'</p>':'<p class="tiny">Keep a running shopping list and share a copy by text.</p>')+
- '<button class="btn small" data-tab="life">Open groceries →</button></section>';
+ const open=groceryNeeds(),bought=state.groceries.filter(x=>x.checked),expanded=ui.todayGroceriesOpen;
+ const row=x=>'<button type="button" class="today-grocery-item'+(x.checked?' is-bought':'')+'" data-grocery-check="'+h(x.id)+'" aria-pressed="'+!!x.checked+'" aria-label="'+h((x.checked?'Put back on shopping list: ':'Mark bought: ')+x.name)+'">'+
+  '<span class="today-grocery-box" aria-hidden="true">'+(x.checked?'✓':'')+'</span>'+
+  '<span class="today-grocery-name">'+h(x.name)+(x.quantity?'<small>'+h(x.quantity)+'</small>':'')+'</span></button>';
+ return '<section class="card span5 today-grocery-card"><div class="row spread"><div><div class="kicker">GROCERIES</div><h2 style="margin:6px 0">Shopping list</h2></div>'+
+  '<button type="button" class="pill today-grocery-toggle" data-grocery-today-toggle="1" aria-expanded="'+expanded+'" aria-controls="todayGroceryChecklist">'+open.length+' to buy <span aria-hidden="true">'+(expanded?'⌃':'⌄')+'</span></button></div>'+
+  (expanded?'<div id="todayGroceryChecklist" class="today-grocery-checklist">'+
+    (open.length?open.map(row).join(''):'<p class="tiny today-grocery-empty">All items checked off. ✓</p>')+
+    (bought.length?'<button type="button" class="today-grocery-bought-toggle" data-grocery-today-bought="1" aria-expanded="'+ui.todayGroceriesShowBought+'">'+bought.length+' in cart <span aria-hidden="true">'+(ui.todayGroceriesShowBought?'⌃':'⌄')+'</span></button>'+
+      (ui.todayGroceriesShowBought?'<div class="today-grocery-bought-list">'+bought.map(row).join('')+'</div>':''):'')+
+    '</div>':
+    (open.length?'<p class="tiny">'+open.slice(0,4).map(x=>h(x.name)).join(' · ')+(open.length>4?' · …':'')+'</p>':'<p class="tiny">Nothing to buy right now.</p>'))+
+  '<button class="btn small" data-tab="life">Open groceries →</button></section>';
 }
 const HOLIDAY_GUIDES={
  Imbolc:'https://www.pagangrimoire.com/what-is-imbolc-celebration/',
@@ -2679,6 +2720,8 @@ if(b.dataset.dinnerGrocery){
  ui.dinnerNotice=added+' added to groceries'+(returned?' · '+returned+' moved back to shopping list':'')+(already?' · '+already+' already there':'')+'.';
  if(added||returned)save();render();return
 }
+if(b.dataset.groceryTodayToggle){ui.todayGroceriesOpen=!ui.todayGroceriesOpen;if(!ui.todayGroceriesOpen)ui.todayGroceriesShowBought=false;render();return}
+if(b.dataset.groceryTodayBought){ui.todayGroceriesShowBought=!ui.todayGroceriesShowBought;render();return}
 if(b.dataset.groceryCheck){const x=state.groceries.find(x=>x.id===b.dataset.groceryCheck);if(x){x.checked=!x.checked;save();render()}return}
 if(b.dataset.groceryEdit){ui.editGroceryId=b.dataset.groceryEdit;ui.tab='life';render();window.scrollTo(0,0);return}
 if(b.dataset.groceryCancel){ui.editGroceryId=null;render();return}
