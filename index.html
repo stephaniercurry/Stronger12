@@ -907,6 +907,21 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 @media(max-width:450px){
  .food-nutrition-card{padding:14px 13px;gap:9px}
 }
+/* Compact Life groceries with swipe/ellipsis actions. Clip hidden layers for iOS scrolling. */
+.grocery-rows{display:grid;gap:4px;margin-top:10px}
+.grocery-swipe.task-swipe{border:1px solid #e6e9f0;border-radius:9px;min-width:0;background:#eef2f2;isolation:isolate;contain:paint;touch-action:pan-y}
+.grocery-swipe:not(.is-revealed) .task-swipe-actions{display:none}
+.grocery-swipe .task-swipe-actions{width:134px}
+.grocery-swipe .task-edit-reveal,.grocery-swipe .task-delete-reveal{font-size:12px}
+.grocery-swipe .grocery-row{display:flex;align-items:center;gap:9px;min-height:48px;padding:5px 7px 5px 9px;margin:0;border:0;background:#fff;position:relative;z-index:1;transition:transform .18s ease;will-change:auto}
+.grocery-swipe.is-revealed .grocery-row{transform:translateX(-134px)}
+.grocery-swipe .grocery-check{width:30px;height:30px;flex:0 0 30px;border-width:1.5px;border-radius:9px;font-size:18px;padding:0}
+.grocery-swipe .grocery-name{display:grid;gap:1px;flex:1;min-width:0}
+.grocery-swipe .grocery-name strong{font-size:13px;line-height:1.25}
+.grocery-swipe .grocery-name .tiny{font-size:10px;line-height:1.25}
+.grocery-swipe .task-more{min-width:32px;min-height:36px;flex:0 0 32px;color:#78859a}
+@media(max-width:400px){.grocery-swipe .grocery-row{gap:7px;padding:5px 5px 5px 7px}.grocery-swipe .grocery-name strong{font-size:12.5px}}
+@media(prefers-reduced-motion:reduce){.grocery-swipe .grocery-row{transition:none}}
 </style>
 </head>
 <body>
@@ -1042,7 +1057,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2,calories:37}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,swipedGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -2159,6 +2174,18 @@ function moneyEnvelopesPanel(){
    '</div>':'')+'</section>';
 }
 
+function groceryListRow(x){
+ const revealed=ui.swipedGroceryId===x.id,details=(x.quantity?x.quantity+' · ':'')+(x.category||'Other');
+ return '<div class="task-swipe grocery-swipe'+(revealed?' is-revealed':'')+'" data-grocery-swipe="'+h(x.id)+'">'+
+  '<div class="task-swipe-actions">'+
+   '<button type="button" class="task-edit-reveal" data-grocery-edit="'+h(x.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(x.name)+'">Edit</button>'+
+   '<button type="button" class="task-delete-reveal" data-grocery-delete="'+h(x.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Delete '+h(x.name)+'">Delete</button></div>'+
+  '<div class="grocery-row'+(x.checked?' is-bought':'')+'">'+
+   '<button type="button" class="grocery-check" data-grocery-check="'+h(x.id)+'" aria-label="'+h((x.checked?'Mark not bought: ':'Mark bought: ')+x.name)+'" aria-pressed="'+!!x.checked+'">'+(x.checked?'✓':'')+'</button>'+
+   '<div class="grocery-name"><strong>'+h(x.name)+'</strong><div class="tiny">'+h(details)+'</div></div>'+
+   '<button type="button" class="task-more" data-grocery-reveal="'+h(x.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(x.name)+'" title="Swipe left or tap for Edit and Delete">···</button>'+
+  '</div></div>';
+}
 function lifePage(){
  const open=groceryNeeds(),done=state.groceries.filter(x=>x.checked),edit=state.groceries.find(x=>x.id===ui.editGroceryId),entries=open.concat(done);
  return header('Life, in one place.','Your groceries, recipes and money—without the extra clutter.')+
@@ -2167,7 +2194,7 @@ function lifePage(){
  '<div class="inlinefields"><div class="field"><label for="groceryQuantity">Quantity / size (optional)</label><input id="groceryQuantity" name="quantity" maxlength="60" placeholder="2 cartons, 1 lb…" value="'+h(edit?.quantity||'')+'"></div>'+
  '<div class="field"><label for="groceryCategory">Aisle</label><select id="groceryCategory" name="category">'+GROCERY_CATEGORIES.map(cat=>'<option '+((edit?.category||'Other')===cat?'selected':'')+'>'+h(cat)+'</option>').join('')+'</select></div></div>'+
  '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save item':'+ Add to groceries')+'</button>'+(edit?'<button type="button" class="btn" data-grocery-cancel="1">Cancel</button>':'')+'</div></form>'+
- '<div class="grocery-rows">'+(entries.length?entries.map(x=>'<div class="grocery-row'+(x.checked?' is-bought':'')+'"><button type="button" class="grocery-check" data-grocery-check="'+h(x.id)+'" aria-label="'+h((x.checked?'Mark not bought: ':'Mark bought: ')+x.name)+'" aria-pressed="'+!!x.checked+'">'+(x.checked?'✓':'')+'</button><div class="grocery-name"><strong>'+h(x.name)+'</strong><div class="tiny">'+h(x.quantity||'')+(x.quantity?' · ':'')+h(x.category||'Other')+'</div></div><button class="btn small" data-grocery-edit="'+h(x.id)+'">Edit</button><button class="btn small danger" data-grocery-delete="'+h(x.id)+'" aria-label="Remove '+h(x.name)+'">×</button></div>').join(''):'<div class="empty">Your list is empty. Add an item to begin.</div>')+'</div>'+
+ '<div class="grocery-rows">'+(entries.length?entries.map(groceryListRow).join(''):'<div class="empty">Your list is empty. Add an item to begin.</div>')+'</div>'+
  (done.length?'<button class="btn small" data-grocery-clear="1" style="margin-top:15px">Clear '+done.length+' purchased '+(done.length===1?'item':'items')+'</button>':'')+
  '<div class="notice" style="margin-top:17px"><strong>Sharing:</strong> Share list sends the current unpurchased items through your iPhone Share menu. Your son receives a copy, not a live synchronized list. Groceries stay private on your phone unless you choose to send them.</div></section>'+
  dinnerIdeasPanel()+moneyEnvelopesPanel()+'</div>';
@@ -3032,11 +3059,32 @@ if(b.dataset.dinnerGrocery){
 }
 if(b.dataset.groceryTodayToggle){ui.todayGroceriesOpen=!ui.todayGroceriesOpen;if(!ui.todayGroceriesOpen)ui.todayGroceriesShowBought=false;render();return}
 if(b.dataset.groceryTodayBought){ui.todayGroceriesShowBought=!ui.todayGroceriesShowBought;render();return}
-if(b.dataset.groceryCheck){const x=state.groceries.find(x=>x.id===b.dataset.groceryCheck);if(x){x.checked=!x.checked;save();render()}return}
-if(b.dataset.groceryEdit){ui.editGroceryId=b.dataset.groceryEdit;ui.tab='life';render();window.scrollTo(0,0);return}
-if(b.dataset.groceryCancel){ui.editGroceryId=null;render();return}
-if(b.dataset.groceryDelete){const i=state.groceries.findIndex(x=>x.id===b.dataset.groceryDelete);if(i>=0){state.groceries.splice(i,1);if(ui.editGroceryId===b.dataset.groceryDelete)ui.editGroceryId=null;save();render()}return}
-if(b.dataset.groceryClear){const n=state.groceries.filter(x=>x.checked).length;if(n&&confirm('Remove '+n+' purchased '+(n===1?'item':'items')+' from the list?')){state.groceries=state.groceries.filter(x=>!x.checked);save();render()}return}
+if(b.dataset.groceryReveal){
+ const id=b.dataset.groceryReveal;
+ if(!state.groceries.some(x=>x.id===id))return;
+ ui.swipedGroceryId=ui.swipedGroceryId===id?null:id;render();return
+}
+if(b.dataset.groceryCheck){const x=state.groceries.find(x=>x.id===b.dataset.groceryCheck);if(x){x.checked=!x.checked;ui.swipedGroceryId=null;save();render()}return}
+if(b.dataset.groceryEdit){
+ if(!state.groceries.some(x=>x.id===b.dataset.groceryEdit))return;
+ ui.editGroceryId=b.dataset.groceryEdit;ui.swipedGroceryId=null;ui.tab='life';render();
+ document.getElementById('groceryForm')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+ document.getElementById('groceryName')?.focus?.({preventScroll:true});return
+}
+if(b.dataset.groceryCancel){ui.editGroceryId=null;ui.swipedGroceryId=null;render();return}
+if(b.dataset.groceryDelete){
+ const i=state.groceries.findIndex(x=>x.id===b.dataset.groceryDelete);
+ if(i>=0){
+  state.groceries.splice(i,1);if(ui.editGroceryId===b.dataset.groceryDelete)ui.editGroceryId=null;
+  ui.swipedGroceryId=null;save();render();
+ }return
+}
+if(b.dataset.groceryClear){
+ const n=state.groceries.filter(x=>x.checked).length;
+ if(n&&confirm('Remove '+n+' purchased '+(n===1?'item':'items')+' from the list?')){
+  state.groceries=state.groceries.filter(x=>!x.checked);ui.swipedGroceryId=null;save();render()
+ }return
+}
 if(b.dataset.groceryShare){void shareGroceries(false);return}
 if(b.dataset.groceryCopy){void shareGroceries(true);return}
 if(b.dataset.taskReveal){ui.swipedTaskId=ui.swipedTaskId===b.dataset.taskReveal?null:b.dataset.taskReveal;render();return}
@@ -3058,13 +3106,14 @@ if(b.dataset.print){window.print();return}});
 let rowTouchStart=null;
 document.addEventListener('touchstart',ev=>{
  const target=ev.target;
- const money=target.closest?.('[data-money-tx-swipe]');
- const dinner=money?null:target.closest?.('[data-dinner-swipe]');
- const event=money||dinner?null:target.closest?.('[data-event-swipe]');
- const task=money||dinner||event?null:target.closest?.('[data-task-swipe]');
- if((!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
- const t=ev.touches[0],kind=money?'money':dinner?'dinner':event?'event':'task',row=money||dinner||event||task;
- const key=kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
+ const grocery=target.closest?.('[data-grocery-swipe]');
+ const money=grocery?null:target.closest?.('[data-money-tx-swipe]');
+ const dinner=grocery||money?null:target.closest?.('[data-dinner-swipe]');
+ const event=grocery||money||dinner?null:target.closest?.('[data-event-swipe]');
+ const task=grocery||money||dinner||event?null:target.closest?.('[data-task-swipe]');
+ if((!grocery&&!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
+ const t=ev.touches[0],kind=grocery?'grocery':money?'money':dinner?'dinner':event?'event':'task',row=grocery||money||dinner||event||task;
+ const key=kind==='grocery'?'grocerySwipe':kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
  rowTouchStart={kind,id:row.dataset[key],x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener('touchcancel',()=>{rowTouchStart=null},{passive:true});
@@ -3073,7 +3122,8 @@ document.addEventListener('touchend',ev=>{
  if(!start||ev.changedTouches.length!==1)return;
  const t=ev.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.25)return;
- if(start.kind==='money'){ui.swipedMoneyTxId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null}
+ if(start.kind==='grocery'){ui.swipedGroceryId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ else if(start.kind==='money'){ui.swipedMoneyTxId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedGroceryId=null}
  else if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  else if(start.kind==='event'){ui.selectedImportantId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedMoneyTxId=null}
  else{ui.swipedTaskId=dx<0?start.id:null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
