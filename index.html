@@ -2830,7 +2830,33 @@ if(b.dataset.reopen){
  ensureSession(ui.week,ui.day).completed=false;
  ui.openCompletedWorkoutKey=null;
  save();render();return
-}if(b.dataset.addPreset!==undefined){const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber,calories:x.calories});save();render();return}if(b.dataset.deleteFood){state.foods=state.foods.filter(f=>f.id!==b.dataset.deleteFood);save();render();return}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
+}if(b.dataset.addPreset!==undefined){
+ const x=FOODS[Number(b.dataset.addPreset)],meal=document.getElementById('presetMeal')?.value||'Snack';
+ if(!x)return;
+ state.foods.push({id:uid(),date:ui.foodDate,meal,name:x.name,protein:x.protein,fiber:x.fiber,calories:x.calories});
+ ui.editFoodId=null;ui.swipedFoodId=null;save();render();return
+}
+if(b.dataset.foodReveal){
+ const id=b.dataset.foodReveal;
+ if(!state.foods.some(f=>f.id===id&&f.date===ui.foodDate))return;
+ ui.swipedFoodId=ui.swipedFoodId===id?null:id;render();return
+}
+if(b.dataset.foodEdit){
+ const entry=state.foods.find(f=>f.id===b.dataset.foodEdit);
+ if(!entry)return;
+ ui.tab='food';ui.foodDate=entry.date;ui.editFoodId=entry.id;ui.swipedFoodId=null;
+ render();
+ document.getElementById('foodForm')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+ document.getElementById('fName')?.focus?.({preventScroll:true});return
+}
+if(b.dataset.foodCancel){ui.editFoodId=null;ui.swipedFoodId=null;render();return}
+if(b.dataset.foodDelete){
+ const index=state.foods.findIndex(f=>f.id===b.dataset.foodDelete);
+ if(index<0)return;
+ state.foods.splice(index,1);
+ if(ui.editFoodId===b.dataset.foodDelete)ui.editFoodId=null;
+ ui.swipedFoodId=null;save();render();return
+}if(b.dataset.shareBackup){shareBackup();return}if(b.dataset.export){exportData(b.dataset.export);return}if(b.dataset.import){document.getElementById('importFile').click();return}if(b.dataset.importantOpen){
  ui.tab='tasks';ui.plannerForm=null;ui.editTaskId=null;ui.importantOpen=false;ui.importantMonth=homeViewDate().slice(0,7);ui.importantDate=homeViewDate();render();
  document.getElementById('importantDatesSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});
  return
@@ -3223,15 +3249,16 @@ if(b.dataset.print){window.print();return}});
 let rowTouchStart=null;
 document.addEventListener('touchstart',ev=>{
  const target=ev.target;
- const weekFood=target.closest?.('[data-week-food-swipe]');
- const grocery=weekFood?null:target.closest?.('[data-grocery-swipe]');
- const money=weekFood||grocery?null:target.closest?.('[data-money-tx-swipe]');
- const dinner=weekFood||grocery||money?null:target.closest?.('[data-dinner-swipe]');
- const event=weekFood||grocery||money||dinner?null:target.closest?.('[data-event-swipe]');
- const task=weekFood||grocery||money||dinner||event?null:target.closest?.('[data-task-swipe]');
- if((!weekFood&&!grocery&&!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
- const t=ev.touches[0],kind=weekFood?'weekFood':grocery?'grocery':money?'money':dinner?'dinner':event?'event':'task',row=weekFood||grocery||money||dinner||event||task;
- const key=kind==='weekFood'?'weekFoodSwipe':kind==='grocery'?'grocerySwipe':kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
+ const foodLog=target.closest?.('[data-food-swipe]');
+ const weekFood=foodLog?null:target.closest?.('[data-week-food-swipe]');
+ const grocery=foodLog||weekFood?null:target.closest?.('[data-grocery-swipe]');
+ const money=foodLog||weekFood||grocery?null:target.closest?.('[data-money-tx-swipe]');
+ const dinner=foodLog||weekFood||grocery||money?null:target.closest?.('[data-dinner-swipe]');
+ const event=foodLog||weekFood||grocery||money||dinner?null:target.closest?.('[data-event-swipe]');
+ const task=foodLog||weekFood||grocery||money||dinner||event?null:target.closest?.('[data-task-swipe]');
+ if((!foodLog&&!weekFood&&!grocery&&!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
+ const t=ev.touches[0],kind=foodLog?'food':weekFood?'weekFood':grocery?'grocery':money?'money':dinner?'dinner':event?'event':'task',row=foodLog||weekFood||grocery||money||dinner||event||task;
+ const key=kind==='food'?'foodSwipe':kind==='weekFood'?'weekFoodSwipe':kind==='grocery'?'grocerySwipe':kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
  rowTouchStart={kind,id:row.dataset[key],x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener('touchcancel',()=>{rowTouchStart=null},{passive:true});
@@ -3240,7 +3267,8 @@ document.addEventListener('touchend',ev=>{
  if(!start||ev.changedTouches.length!==1)return;
  const t=ev.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.25)return;
- if(start.kind==='weekFood'){ui.swipedWeekFoodId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedGroceryId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ if(start.kind==='food'){ui.swipedFoodId=dx<0?start.id:null;ui.swipedWeekFoodId=null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedGroceryId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ else if(start.kind==='weekFood'){ui.swipedWeekFoodId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedGroceryId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  else if(start.kind==='grocery'){ui.swipedGroceryId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  else if(start.kind==='money'){ui.swipedMoneyTxId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedGroceryId=null}
  else if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
@@ -3641,13 +3669,22 @@ if(ev.target.id==='weekFoodQuickForm'){
  const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),
   protein=Number(fd.get('protein')),fiber=Number(fd.get('fiber')),
   calorieInput=String(fd.get('calories')??'').trim(),
-  calories=calorieInput===''?null:Number(calorieInput);
+  calories=calorieInput===''?null:Number(calorieInput),
+  meal=String(fd.get('meal')||'Breakfast');
  if(!name||!Number.isFinite(protein)||protein<0||!Number.isFinite(fiber)||fiber<0||
-    (calories!==null&&(!Number.isFinite(calories)||calories<0))){
-  alert('Enter a food name and valid protein, fiber and optional calorie values.');return
+    (calories!==null&&(!Number.isFinite(calories)||calories<0))||
+    !['Breakfast','Lunch','Dinner','Snack'].includes(meal)){
+  alert('Enter a food name and valid meal, protein, fiber and optional calorie values.');return
  }
- state.foods.push({id:uid(),date:ui.foodDate,meal:String(fd.get('meal')),name,protein,fiber,calories});
- save();render();return
+ const patch={name,meal,protein,fiber,calories};
+ if(ui.editFoodId){
+  const entry=state.foods.find(f=>f.id===ui.editFoodId&&f.date===ui.foodDate);
+  if(!entry){alert('The food entry is no longer available on this date.');ui.editFoodId=null;render();return}
+  Object.assign(entry,patch);
+ }else{
+  state.foods.push({id:uid(),date:ui.foodDate,...patch});
+ }
+ ui.editFoodId=null;ui.swipedFoodId=null;save();render();return
 }if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
 document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],weekFoodIdeas:Array.isArray(o.weekFoodIdeas)?o.weekFoodIdeas.filter(id=>typeof id==='string'):[],quickWeekFoodIdeas:Array.isArray(o.quickWeekFoodIdeas)?o.quickWeekFoodIdeas.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({id:x.id,name:x.name.slice(0,140)})):[],weekFoodMade:Array.isArray(o.weekFoodMade)?o.weekFoodMade.filter(x=>typeof x==='string'):[],moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
 function refreshTodayDate(){
