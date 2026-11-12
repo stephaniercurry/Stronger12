@@ -2476,7 +2476,7 @@ function brainPuzzleCard(date){
   '<button type="button" class="brain-toggle" data-brain-toggle="1" aria-expanded="'+open+'" aria-controls="brainPuzzleBody">'+
    '<span class="brain-symbol" aria-hidden="true">◈</span>'+
    '<span class="brain-heading"><span class="brain-kicker">DAILY BRAIN BREAK</span>'+
-    '<strong>Today’s puzzle</strong><span>'+h(puzzle.label)+' · '+(puzzle.kind==='sudoku'?'4 × 4 grid':'3 challenges')+'</span></span>'+
+    '<strong>'+(date===TODAY?'Today’s puzzle':'Puzzle for this day')+'</strong><span>'+h(puzzle.label)+' · '+(puzzle.kind==='sudoku'?'4 × 4 grid':'3 challenges')+'</span></span>'+
    '<span class="brain-status">'+(done?'✓ Done':open?'Hide':'Play')+'</span>'+
    '<span class="brain-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></button>'+
   (open?'<div class="brain-body" id="brainPuzzleBody">'+body+
