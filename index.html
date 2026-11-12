@@ -841,6 +841,27 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .planner-holiday-row{display:flex;align-items:flex-start;gap:8px;padding:6px 9px;border:1px solid #e7e0d3;border-radius:8px;background:#faf7ee}
 .planner-holiday-row>span{flex:0 0 20px;font-size:17px}.planner-holiday-row strong{display:block;font-size:12px}.planner-holiday-row small{font-size:10px;color:#87775e}
 @media(max-width:600px){.holiday-choice-grid{grid-template-columns:1fr}}
+/* Next observance per selected tradition, rather than one globally earliest holiday. */
+.today-calendar-card .today-traditions-preview{
+ margin-top:9px;padding:10px 11px;border:1px solid #f0e1ea;
+ border-radius:12px;background:#f8f0f5;min-width:0
+}
+.today-calendar-card .today-traditions-preview>.kicker{font-size:10px;margin-bottom:5px}
+.today-traditions-list{display:grid;gap:0}
+.today-tradition-row{
+ display:flex;gap:9px;align-items:center;min-width:0;
+ padding:7px 0;border-bottom:1px solid #ecdfeb
+}
+.today-tradition-row:last-child{border-bottom:0;padding-bottom:2px}
+.today-tradition-icon{flex:0 0 22px;font-size:17px;text-align:center}
+.today-tradition-copy{display:grid;gap:1px;flex:1;min-width:0;line-height:1.24}
+.today-tradition-label{font-size:10px;font-weight:700;color:#86607b}
+.today-tradition-copy strong{font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+.today-tradition-unlisted{font-size:11px;color:var(--muted)}
+.today-tradition-row time{
+ flex:0 0 auto;font-size:12px;font-weight:750;color:#655575;
+ white-space:nowrap;font-variant-numeric:tabular-nums
+}
 </style>
 </head>
 <body>
@@ -1611,7 +1632,7 @@ function importantEntryText(e,short=false,relativeTo=TODAY){
 }
 function agendaTodayCard(date=TODAY){
  const limit=addDays(date,7),personal=importantOccurrences(date,7);
- const futureHolidays=selectedHolidays(date),next=futureHolidays.find(x=>x.date>=date)||null;
+ const futureHolidays=selectedHolidays(date);
  const inWeek=futureHolidays.filter(x=>x.date<=limit).map(x=>({
   id:'holiday:'+x.tradition+':'+x.name+':'+x.date,type:'holiday',title:x.name,
   start:x.date,end:x.end||x.date,sortDate:x.date,meaning:x.meaning,
@@ -1630,10 +1651,38 @@ function agendaTodayCard(date=TODAY){
  };
  const row=e=>e.type==='holiday'?holidayRow(e):
   '<div class="agenda-event"><span class="agenda-emoji">'+IMPORTANT_TYPES[e.type].emoji+'</span><div><strong>'+h(e.title)+'</strong><div class="tiny">'+(e.start<=date&&e.end>=date?h(IMPORTANT_TYPES[e.type].label)+(e.time?' · '+h(eventTimeDisplay(e.time)||e.time):'')+(e.type==='birthday'&&e.age!==null?' · Turning '+e.age:''):importantEntryText(e,true,date))+'</div></div></div>';
- const nextIsShown=next&&todayShown.concat(weekShown).some(e=>e.type==='holiday'&&e.title===next.name&&e.start===next.date);
- const nextPanel=next&&!nextIsShown?
-   '<div class="next-holiday"><div class="kicker">NEXT OBSERVANCE · '+h(daysBetween(date,next.date))+' DAYS AWAY</div>'+
-   holidayRow(next)+'</div>':'';
+ /* Show the next observance from EACH selected tradition. A nearer Jewish
+    holiday, for example, must not hide an upcoming Pagan holiday. */
+ const picked=holidaySelections();
+ const previewTraditions=picked.length?picked:(state.settings.holidayExplore?
+    [...new Set(futureHolidays.map(x=>x.tradition))].slice(0,4):[]);
+ const nextByTradition=previewTraditions.map(id=>{
+   const details=HOLIDAY_TRADITIONS.find(x=>x[0]===id);
+   return {id,details,holiday:futureHolidays.find(x=>x.tradition===id&&x.end>=date)||null};
+ });
+ if(customObservances().length)nextByTradition.push({
+   id:'personal',details:['personal','✨','Your own observances'],
+   holiday:futureHolidays.find(x=>x.tradition==='personal'&&x.end>=date)||null
+ });
+ nextByTradition.sort((a,b)=>
+   String(a.holiday?.date||'9999-12-31').localeCompare(String(b.holiday?.date||'9999-12-31'))||
+   String(a.details?.[2]||'').localeCompare(String(b.details?.[2]||'')));
+ const nextPanel=nextByTradition.length?
+  '<section class="today-traditions-preview" aria-label="Next observance for each selected tradition">'+
+  '<div class="kicker">NEXT IN YOUR TRADITIONS</div>'+
+  '<div class="today-traditions-list">'+nextByTradition.map(x=>{
+    const holiday=x.holiday;
+    const when=holiday?(holiday.date<=date?'Today':formatDate(holiday.date,{
+      month:'short',day:'numeric',...(holiday.date.slice(0,4)!==date.slice(0,4)?{year:'numeric'}:{})
+    })+(holiday.approx?' *':'')):'';
+    return '<div class="today-tradition-row">'+
+     '<span class="today-tradition-icon" aria-hidden="true">'+(x.details?.[1]||'✨')+'</span>'+
+     '<div class="today-tradition-copy"><span class="today-tradition-label">'+h(x.details?.[2]||'Personal')+'</span>'+
+     (holiday?'<strong>'+h(holiday.name)+'</strong>':
+      '<span class="today-tradition-unlisted">No dated observances yet · add yours in Settings</span>')+'</div>'+
+     (holiday?'<time datetime="'+h(holiday.date)+'">'+h(when)+'</time>':'')+
+     '</div>';
+  }).join('')+'</div></section>':'';
  return '<section class="card span12 today-calendar-card"><div class="row spread wrap"><div><div class="kicker">YOUR CALENDAR</div><h2 style="margin:6px 0">What’s happening?</h2></div></div>'+
  '<div class="agenda-cols"><div><h3>'+(date===TODAY?'Today':'Selected day')+'</h3>'+(today.length?todayShown.map(row).join(''):'<p class="tiny">Nothing scheduled for this day.</p>')+'</div>'+
  '<div><h3>Coming up · next 7 days</h3>'+(week.length?weekShown.map(row).join(''):'<p class="tiny">No other plans or holidays in the next seven days.</p>')+'</div></div>'+
