@@ -960,6 +960,39 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .food-log-swipe .task-more{min-width:32px;min-height:36px;flex:0 0 32px;color:#78859a}
 @media(max-width:400px){.food-log-swipe .food-item{gap:7px;padding:6px 5px 6px 7px}.food-log-title strong{font-size:12.5px}}
 @media(prefers-reduced-motion:reduce){.food-log-swipe .food-item{transition:none}}
+
+/* Tiny Daily Brain Break above the Today list; puzzle opens only on tap. */
+.brain-card{padding:12px 15px!important;background:#f9f7fc;border:1px solid #e6e2ef}
+.brain-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:45px;padding:0;border:0;background:transparent;text-align:left;color:var(--ink)}
+.brain-symbol{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:#e8e4f4;color:#735a9b;font-size:22px}
+.brain-heading{display:grid;gap:1px;min-width:0;flex:1}
+.brain-kicker{font-size:9px;font-weight:850;letter-spacing:.08em;color:#8a75a5}
+.brain-heading strong{font-size:15px;line-height:1.2}
+.brain-heading>span:last-child{font-size:11px;color:var(--muted)}
+.brain-status{font-size:12px;color:#74678a;font-weight:800;white-space:nowrap}
+.brain-arrow{font-size:19px;color:#847398}
+.brain-body{display:grid;gap:11px;justify-items:start;border-top:1px solid #e5ddec;margin-top:10px;padding-top:11px}
+.brain-instructions{font-size:12px;color:var(--muted);margin:0}
+.brain-round{font-size:10px;font-weight:850;letter-spacing:.08em;color:#816e97}
+.brain-grid{display:grid;grid-template-columns:repeat(4,1fr);width:min(100%,238px);border:2px solid #6b647d;border-radius:8px;overflow:hidden}
+.brain-cell{display:grid;place-items:center;aspect-ratio:1;min-width:0;padding:0;border:0;border-right:1px solid #d6d2e1;border-bottom:1px solid #d6d2e1;background:#fff;color:#304959;font-size:21px;font-weight:750}
+.brain-cell:nth-child(4n){border-right:0}.brain-cell:nth-last-child(-n+4){border-bottom:0}
+.brain-cell.brain-box-right{border-right:2px solid #6b647d}.brain-cell.brain-box-bottom{border-bottom:2px solid #6b647d}
+.brain-cell.is-given{background:#efedf6;color:#565169;cursor:default;opacity:1;font-weight:900}
+.brain-cell.is-selected{background:#d2e9e8;box-shadow:inset 0 0 0 2px #328c89}
+.brain-pad,.brain-choices{display:flex;gap:6px;flex-wrap:wrap}
+.brain-pad button,.brain-choices button{min-width:42px;min-height:40px;padding:5px;border-radius:9px;border:1px solid #cdc6dd;background:#fff;color:var(--ink);font-weight:850}
+.brain-choices button{min-width:60px}
+.brain-letters{display:flex;gap:4px;flex-wrap:wrap}.brain-letters span{display:grid;place-items:center;min-width:28px;min-height:34px;border:1px solid #dcd4e9;border-radius:7px;background:white;font-size:17px;font-weight:800}
+.brain-answer{display:grid;gap:5px;width:min(100%,350px)}.brain-answer label{font-size:11px;color:var(--muted);font-weight:750}
+.brain-answer>div{display:flex;gap:8px;flex-wrap:wrap}.brain-answer input{font-size:16px;min-width:0;flex:1 1 160px}
+.brain-answer .btn{min-height:42px}
+.brain-sequence{border:1px solid #ddd7e8;border-radius:9px;background:#fff;padding:9px 11px;font-size:15px;font-weight:850;letter-spacing:.05em}
+.brain-message{margin:0;font-size:12px;font-weight:750;color:#675783}
+.brain-success{font-size:13px;font-weight:750;color:#347a6c;padding:5px 0}
+.brain-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;width:100%}
+.brain-footer span{font-size:10px;color:var(--muted)}
+.brain-footer button{border:0;background:transparent;text-decoration:underline;color:#786b8e;font-size:11px;padding:5px;min-height:32px}
 </style>
 </head>
 <body>
@@ -988,9 +1021,9 @@ function formatDate(s,opts){return dateOf(s).toLocaleDateString(undefined,opts||
 function h(v){return String(v===undefined||v===null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(n,dp=0){return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:dp})}
 const defaultSettings={startDate:nextMonday(),proteinGoal:130,fiberGoal:30,calorieGoal:null,weightUnit:'lb',upperIncrement:2.5,lowerIncrement:5,holidayTraditions:['pagan'],holidayExplore:false,holidayCustom:[]};
-let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],weekFoodIdeas:[],quickWeekFoodIdeas:[],weekFoodMade:[],moneyEnvelopes:[],moneyHistory:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
+let state={version:1,settings:{...defaultSettings},workouts:{},foods:[],checkins:[],tasks:[],yogaSessions:[],groceries:[],dinnerIdeas:[],weekFoodIdeas:[],quickWeekFoodIdeas:[],weekFoodMade:[],brainPuzzles:{},moneyEnvelopes:[],moneyHistory:[],birthdays:[],importantEvents:[],cycles:[],activeCycleId:null,workoutChoices:{}};
 let storageFailed=false;
-try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],weekFoodIdeas:Array.isArray(obj.weekFoodIdeas)?obj.weekFoodIdeas.filter(id=>typeof id==='string'):[],quickWeekFoodIdeas:Array.isArray(obj.quickWeekFoodIdeas)?obj.quickWeekFoodIdeas.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({id:x.id,name:x.name.slice(0,140)})):[],weekFoodMade:Array.isArray(obj.weekFoodMade)?obj.weekFoodMade.filter(x=>typeof x==='string'):[],moneyEnvelopes:Array.isArray(obj.moneyEnvelopes)?obj.moneyEnvelopes:[],moneyHistory:Array.isArray(obj.moneyHistory)?obj.moneyHistory:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
+try{const saved=localStorage.getItem(STORE);if(saved){const obj=JSON.parse(saved);if(obj&&typeof obj==='object')state={version:1,settings:{...defaultSettings,...obj.settings},workouts:obj.workouts||{},foods:Array.isArray(obj.foods)?obj.foods:[],checkins:Array.isArray(obj.checkins)?obj.checkins:[],tasks:Array.isArray(obj.tasks)?obj.tasks:[],yogaSessions:Array.isArray(obj.yogaSessions)?obj.yogaSessions:[],groceries:Array.isArray(obj.groceries)?obj.groceries:[],dinnerIdeas:Array.isArray(obj.dinnerIdeas)?obj.dinnerIdeas:[],weekFoodIdeas:Array.isArray(obj.weekFoodIdeas)?obj.weekFoodIdeas.filter(id=>typeof id==='string'):[],quickWeekFoodIdeas:Array.isArray(obj.quickWeekFoodIdeas)?obj.quickWeekFoodIdeas.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({id:x.id,name:x.name.slice(0,140)})):[],weekFoodMade:Array.isArray(obj.weekFoodMade)?obj.weekFoodMade.filter(x=>typeof x==='string'):[],brainPuzzles:obj.brainPuzzles&&typeof obj.brainPuzzles==='object'&&!Array.isArray(obj.brainPuzzles)?obj.brainPuzzles:{},moneyEnvelopes:Array.isArray(obj.moneyEnvelopes)?obj.moneyEnvelopes:[],moneyHistory:Array.isArray(obj.moneyHistory)?obj.moneyHistory:[],birthdays:Array.isArray(obj.birthdays)?obj.birthdays:[],importantEvents:Array.isArray(obj.importantEvents)?obj.importantEvents:[],cycles:Array.isArray(obj.cycles)?obj.cycles:[],activeCycleId:obj.activeCycleId||null,workoutChoices:obj.workoutChoices&&typeof obj.workoutChoices==='object'&&!Array.isArray(obj.workoutChoices)?obj.workoutChoices:{}}}}catch(e){storageFailed=true}
 const PROGRAM_OPTIONS={
  foundation:{label:'Foundations',description:'The original full-body, upper-body and lower-body program, with simple progression and recovery weeks.'},
  builder:{label:'Strength Builder',description:'A new 12-week block with more upper/lower strength emphasis using familiar home or gym exercises.'},
@@ -1095,7 +1128,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2,calories:37}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,editFoodId:null,swipedFoodId:null,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,swipedGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,swipedWeekFoodId:null,editQuickWeekFoodId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,editFoodId:null,swipedFoodId:null,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,swipedGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,swipedWeekFoodId:null,editQuickWeekFoodId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,brainOpen:false,brainCell:null,brainMessage:'',workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -1235,6 +1268,7 @@ function setHomeViewDate(date){
  ui.homeDate=date===TODAY?null:date;
  ui.homeDatePickerOpen=false;
  ui.swipedTaskId=null;
+ ui.brainOpen=false;ui.brainCell=null;ui.brainMessage='';
  render();
 }
 function homeDateBar(){
@@ -2303,7 +2337,157 @@ function moneyTodayCard(){
  '</section>';
 }
 
+
+/* Offline daily brain puzzles: consistent per date, no scores, timers or streaks. */
+const BRAIN_WORDS=[
+ ['LANTERN','Portable light'],['GARDEN','Place where plants grow'],
+ ['COMPASS','A direction-finding tool'],['ORBIT','A path around a planet'],
+ ['MOSAIC','Picture made from small pieces'],['HARBOR','Sheltered place for boats'],
+ ['TWILIGHT','Light just after sunset'],['FOREST','Large area of trees'],
+ ['ANCHOR','Keeps a boat from drifting'],['GALAXY','Many stars together'],
+ ['SKETCH','A quick drawing'],['WONDER','Curiosity and awe'],
+ ['CANYON','A deep valley'],['MEADOW','An open grassy area'],
+ ['JOURNEY','A trip'],['BREEZE','Gentle wind'],
+ ['KERNEL','Inner part of a grain'],['MARBLE','Patterned decorative stone'],
+ ['POETRY','Creative writing with rhythm'],['ECLIPSE','One heavenly body blocks another'],
+ ['SPIRAL','Curve winding around a point'],['HORIZON','Where sky and land seem to meet'],
+ ['RHYTHM','Repeated pattern of beats'],['LIBRARY','Place where books are borrowed']
+];
+function brainSeed(date){let n=2166136261;for(const ch of date)n=Math.imul(n^ch.charCodeAt(0),16777619)>>>0;return n||1}
+function brainRandom(seed){let n=seed||1;return ()=>{n^=n<<13;n^=n>>>17;n^=n<<5;return (n>>>0)/4294967296}}
+function brainShuffle(arr,rnd){
+ const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;
+}
+function brainSudokuCount(grid,limit=2){
+ const board=grid.slice();let total=0;
+ function solve(){
+  if(total>=limit)return;
+  let best=-1,candidates=null;
+  for(let pos=0;pos<16;pos++){
+   if(board[pos])continue;
+   const row=Math.floor(pos/4),col=pos%4,used=new Set();
+   for(let k=0;k<4;k++){used.add(board[row*4+k]);used.add(board[k*4+col])}
+   for(let r=2*Math.floor(row/2);r<2*Math.floor(row/2)+2;r++)
+    for(let c=2*Math.floor(col/2);c<2*Math.floor(col/2)+2;c++)used.add(board[r*4+c]);
+   const options=[1,2,3,4].filter(n=>!used.has(n));
+   if(!options.length)return;
+   if(candidates===null||options.length<candidates.length){best=pos;candidates=options}
+  }
+  if(best===-1){total++;return}
+  for(const n of candidates){board[best]=n;solve();board[best]=0;if(total>=limit)return}
+ }
+ solve();return total;
+}
+function brainSudoku(rnd){
+ const base=[1,2,3,4,3,4,1,2,2,1,4,3,4,3,2,1],digits=brainShuffle([1,2,3,4],rnd);
+ let rows=[0,1,2,3],cols=[0,1,2,3];
+ for(const arr of [rows,cols]){
+  if(rnd()<.5)[arr[0],arr[1]]=[arr[1],arr[0]];
+  if(rnd()<.5)[arr[2],arr[3]]=[arr[3],arr[2]];
+  if(rnd()<.5)arr.splice(0,4,arr[2],arr[3],arr[0],arr[1]);
+ }
+ const transpose=rnd()<.5;
+ const solution=Array.from({length:16},(_,i)=>{
+  const r=Math.floor(i/4),c=i%4;
+  return digits[base[transpose?rows[c]*4+cols[r]:rows[r]*4+cols[c]]-1];
+ });
+ let givens=solution.slice(),left=16;
+ for(const p of brainShuffle([...Array(16).keys()],rnd)){
+  if(left<=8)break;
+  const previous=givens[p];givens[p]=0;
+  if(brainSudokuCount(givens)!==1)givens[p]=previous;else left--;
+ }
+ return {kind:'sudoku',label:'Mini Sudoku',solution,givens};
+}
+function brainNumbers(rnd){
+ const types=brainShuffle([0,1,2,3,4,5],rnd).slice(0,3);
+ return types.map(type=>{
+  const a=2+Math.floor(rnd()*9),d=2+Math.floor(rnd()*6);
+  let seq=[];
+  if(type===0)seq=Array.from({length:6},(_,i)=>a+d*i);
+  if(type===1){let n=a;seq=[n];for(let k=1;k<6;k++){n+=d+k;seq.push(n)}}
+  if(type===2){let n=a;seq=[n];for(let k=1;k<6;k++){n+=(k%2?d:d+3);seq.push(n)}}
+  if(type===3)seq=Array.from({length:6},(_,i)=>a*Math.pow(2,i));
+  if(type===4){seq=[a,a+d];for(let k=2;k<6;k++)seq.push(seq[k-1]+seq[k-2])}
+  if(type===5)seq=Array.from({length:6},(_,i)=>(i+1)*(i+1)+a);
+  const answer=seq.pop(),choices=[answer];
+  for(const off of brainShuffle([-12,-9,-6,-4,-3,-2,-1,1,2,3,4,6,9,12],rnd)){
+   if(choices.length===4)break;
+   if(answer+off>0&&!choices.includes(answer+off))choices.push(answer+off);
+  }
+  return {sequence:seq,answer,choices:brainShuffle(choices,rnd)};
+ });
+}
+function brainPuzzleForDate(date){
+ const seed=brainSeed(date),rnd=brainRandom(seed),kind=['sudoku','word','number'][seed%3];
+ if(kind==='sudoku')return brainSudoku(rnd);
+ if(kind==='number')return {kind,label:'Number patterns',rounds:brainNumbers(rnd)};
+ const rounds=brainShuffle(BRAIN_WORDS,rnd).slice(0,3).map(([answer,clue])=>{
+  let mixed=brainShuffle([...answer],rnd).join('');
+  if(mixed===answer)mixed=answer.slice(1)+answer[0];
+  return {answer,clue,mixed};
+ });
+ return {kind,label:'Word scrambles',rounds};
+}
+function brainEntry(date){
+ if(!state.brainPuzzles||typeof state.brainPuzzles!=='object'||Array.isArray(state.brainPuzzles))state.brainPuzzles={};
+ if(!state.brainPuzzles[date])state.brainPuzzles[date]={done:false,round:0,cells:[]};
+ return state.brainPuzzles[date];
+}
+function brainPuzzleCard(date){
+ const puzzle=brainPuzzleForDate(date),entry=state.brainPuzzles?.[date]||{};
+ const done=entry.done===true,open=ui.brainOpen;
+ const round=Math.max(0,Math.min(2,Math.floor(Number(entry.round)||0)));
+ let body='';
+ if(done)body='<div class="brain-success" role="status">✓ Puzzle complete. The next day brings a new one.</div>';
+ else if(puzzle.kind==='sudoku'){
+  const values=Array.isArray(entry.cells)?entry.cells:[];
+  const blanks=puzzle.givens.map((n,i)=>n===0?i:-1).filter(i=>i>=0);
+  const selected=blanks.includes(ui.brainCell)?ui.brainCell:blanks[0];
+  body='<p class="brain-instructions">Use 1–4 once in each row, column, and 2 × 2 box.</p>'+
+   '<div class="brain-grid" role="group" aria-label="Four by four Sudoku puzzle">'+
+   puzzle.givens.map((given,i)=>{
+    const value=given||Number(values[i])||'',r=Math.floor(i/4),col=i%4;
+    return '<button type="button" class="brain-cell'+(given?' is-given':'')+(i===selected?' is-selected':'')+
+     (col===1?' brain-box-right':'')+(r===1?' brain-box-bottom':'')+'"'+
+     (given?' disabled':' data-brain-cell="'+i+'" aria-pressed="'+(i===selected)+'"')+
+     ' aria-label="Row '+(r+1)+' column '+(col+1)+(given?', given '+value:value?', entered '+value:', empty')+'">'+value+'</button>';
+   }).join('')+'</div><div class="brain-pad" role="group" aria-label="Number input">'+
+   [1,2,3,4].map(n=>'<button type="button" data-brain-number="'+n+'">'+n+'</button>').join('')+
+   '<button type="button" data-brain-clear="1" aria-label="Erase selected number">⌫</button></div>';
+ }else if(puzzle.kind==='word'){
+  const q=puzzle.rounds[round];
+  body='<div class="brain-round">WORD '+(round+1)+' / 3</div>'+
+   '<div class="brain-letters" aria-label="Scrambled letters '+q.mixed.split('').join(' ')+'">'+
+    q.mixed.split('').map(ch=>'<span>'+h(ch)+'</span>').join('')+'</div>'+
+   '<p class="brain-instructions">Clue: '+h(q.clue)+'</p>'+
+   '<form id="brainWordForm" class="brain-answer"><label for="brainWordAnswer">Unscramble the word</label>'+
+    '<div><input id="brainWordAnswer" name="answer" type="text" maxlength="18" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Your answer">'+
+    '<button class="btn small primary" type="submit">Check</button></div></form>';
+ }else{
+  const q=puzzle.rounds[round];
+  body='<div class="brain-round">PATTERN '+(round+1)+' / 3</div>'+
+   '<p class="brain-instructions">Which number comes next?</p>'+
+   '<div class="brain-sequence">'+q.sequence.join(' · ')+' · ?</div>'+
+   '<div class="brain-choices" role="group" aria-label="Choose the next number">'+
+    q.choices.map(n=>'<button type="button" data-brain-choice="'+n+'">'+n+'</button>').join('')+'</div>';
+ }
+ return '<section class="card span12 brain-card" id="brainPuzzleCard">'+
+  '<button type="button" class="brain-toggle" data-brain-toggle="1" aria-expanded="'+open+'" aria-controls="brainPuzzleBody">'+
+   '<span class="brain-symbol" aria-hidden="true">◈</span>'+
+   '<span class="brain-heading"><span class="brain-kicker">DAILY BRAIN BREAK</span>'+
+    '<strong>Today’s puzzle</strong><span>'+h(puzzle.label)+' · '+(puzzle.kind==='sudoku'?'4 × 4 grid':'3 challenges')+'</span></span>'+
+   '<span class="brain-status">'+(done?'✓ Done':open?'Hide':'Play')+'</span>'+
+   '<span class="brain-arrow" aria-hidden="true">'+(open?'⌃':'⌄')+'</span></button>'+
+  (open?'<div class="brain-body" id="brainPuzzleBody">'+body+
+   (ui.brainMessage&&!done?'<p class="brain-message" role="status">'+h(ui.brainMessage)+'</p>':'')+
+   '<div class="brain-footer"><span>No timer, no streaks. Just a small daily challenge.</span>'+
+    '<button type="button" data-brain-reset="1">'+(done?'Play again':'Start over')+'</button></div></div>':'')+
+  '</section>';
+}
+
 const TODAY_SECTIONS=[
+ ['brain','Daily puzzle','A quick brain break'],
  ['tasks','Tasks','Your to-do list and quick add'],
  ['calendar','Calendar','Today and upcoming events'],
  ['foodIdeas','Food ideas','Your current meal shortlist'],
@@ -2364,6 +2548,7 @@ function todayNutritionCard(date,totals){
 function dashboard(){
  const date=homeViewDate(),t=dailyTotals(date);
  const cards=[
+  ['brain',()=>brainPuzzleCard(date)],
   ['tasks',()=>taskSummary(date)],
   ['calendar',()=>agendaTodayCard(date)],
   ['foodIdeas',()=>weekFoodTodayCard()],
@@ -3686,7 +3871,7 @@ if(ev.target.id==='weekFoodQuickForm'){
  }
  ui.editFoodId=null;ui.swipedFoodId=null;save();render();return
 }if(ev.target.id==='checkinForm'){ev.preventDefault();const fd=new FormData(ev.target),date=String(fd.get('date')||TODAY),weight=String(fd.get('weight')||''),waist=String(fd.get('waist')||'');if(!weight&&!waist){alert('Enter at least one measurement, or skip this optional check-in.');return}state.checkins.push({id:uid(),date,weight,waist});save();render();return}});
-document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],weekFoodIdeas:Array.isArray(o.weekFoodIdeas)?o.weekFoodIdeas.filter(id=>typeof id==='string'):[],quickWeekFoodIdeas:Array.isArray(o.quickWeekFoodIdeas)?o.quickWeekFoodIdeas.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({id:x.id,name:x.name.slice(0,140)})):[],weekFoodMade:Array.isArray(o.weekFoodMade)?o.weekFoodMade.filter(x=>typeof x==='string'):[],moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
+document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||typeof o!=='object'||!o.settings||!o.workouts||!Array.isArray(o.foods))throw Error('Not a valid Stronger / 12 backup.');if(!confirm('Restore this backup? It will replace the data currently stored in this browser. Export your current data first if you need it.'))return;state={version:1,settings:{...defaultSettings,...o.settings},workouts:o.workouts,foods:o.foods,checkins:Array.isArray(o.checkins)?o.checkins:[],tasks:Array.isArray(o.tasks)?o.tasks:[],yogaSessions:Array.isArray(o.yogaSessions)?o.yogaSessions:[],groceries:Array.isArray(o.groceries)?o.groceries:[],dinnerIdeas:Array.isArray(o.dinnerIdeas)?o.dinnerIdeas:[],weekFoodIdeas:Array.isArray(o.weekFoodIdeas)?o.weekFoodIdeas.filter(id=>typeof id==='string'):[],quickWeekFoodIdeas:Array.isArray(o.quickWeekFoodIdeas)?o.quickWeekFoodIdeas.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string').map(x=>({id:x.id,name:x.name.slice(0,140)})):[],weekFoodMade:Array.isArray(o.weekFoodMade)?o.weekFoodMade.filter(x=>typeof x==='string'):[],brainPuzzles:o.brainPuzzles&&typeof o.brainPuzzles==='object'&&!Array.isArray(o.brainPuzzles)?o.brainPuzzles:{},moneyEnvelopes:Array.isArray(o.moneyEnvelopes)?o.moneyEnvelopes:[],moneyHistory:Array.isArray(o.moneyHistory)?o.moneyHistory:[],birthdays:Array.isArray(o.birthdays)?o.birthdays:[],importantEvents:Array.isArray(o.importantEvents)?o.importantEvents:[],cycles:Array.isArray(o.cycles)?o.cycles:[],activeCycleId:o.activeCycleId||null,workoutChoices:o.workoutChoices&&typeof o.workoutChoices==='object'&&!Array.isArray(o.workoutChoices)?o.workoutChoices:{}};ensureCycleData();ui.week=currentWeek();save();render();alert('Backup restored.')}catch(err){alert('Could not restore backup: '+err.message)}finally{ev.target.value=''}});
 function refreshTodayDate(){
  const fresh=iso(new Date());
  if(fresh===TODAY)return;
