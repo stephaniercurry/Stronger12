@@ -2816,7 +2816,7 @@ if(mode){
  }
  state.workoutChoices[key(ui.week,ui.day)]=mode;
  save();render();return;
-}const tab=b.dataset.tab;if(tab){if(ui.tab==='home'&&tab==='food')ui.foodDate=homeViewDate();if(ui.tab==='home'&&tab==='tasks'){ui.importantDate=homeViewDate();ui.importantMonth=ui.importantDate.slice(0,7)}const from=ui.tab;ui.tab=tab;if(tab==='lift'){if(from==='home')setWorkoutViewDate(homeViewDate());else setWorkoutViewDate(tabDate('lift'));window.scrollTo(0,0);return}render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));openWorkoutSlot();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;openWorkoutSlot();return}if(b.dataset.complete){
+}const tab=b.dataset.tab;if(tab){if(ui.tab==='home'&&tab==='food'){ui.foodDate=homeViewDate();ui.editFoodId=null;ui.swipedFoodId=null}if(ui.tab==='home'&&tab==='tasks'){ui.importantDate=homeViewDate();ui.importantMonth=ui.importantDate.slice(0,7)}const from=ui.tab;ui.tab=tab;if(tab==='lift'){if(from==='home')setWorkoutViewDate(homeViewDate());else setWorkoutViewDate(tabDate('lift'));window.scrollTo(0,0);return}render();window.scrollTo(0,0);return}if(b.dataset.weekStep){ui.week=Math.max(1,Math.min(12,ui.week+Number(b.dataset.weekStep)));openWorkoutSlot();return}if(b.dataset.day){if(!['mon','tue','wed','thu','fri'].includes(b.dataset.day))return;ui.day=b.dataset.day;openWorkoutSlot();return}if(b.dataset.complete){
  const session=ensureSession(ui.week,ui.day);
  const any=Object.values(session.sets||{}).some(a=>Array.isArray(a)&&a.some(x=>x&&Number(x.reps)>0));
  if(!any){alert('Log at least one set before marking a session complete. Partial workouts are fine.');return}
