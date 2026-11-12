@@ -888,6 +888,25 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .food-daily-metric .daily-row strong{white-space:nowrap}
 .food-daily-metric .daily-row strong small{font-size:10px}
 @media(max-width:460px){.food-daily-metrics{gap:7px}.food-daily-metric .daily-row .kicker{font-size:10px}.food-daily-metric .daily-row strong{font-size:13px}}
+
+/* Food reuses Today's compact ring visualization without repeating its progress bars. */
+.food-nutrition-card{
+ padding:16px 17px 15px;
+ display:grid;
+ gap:10px;
+ min-width:0
+}
+.food-nutrition-card .food-calorie-note{
+ margin:0;
+ position:relative;
+ z-index:1;
+ font-size:11px;
+ color:#d6dcee;
+ line-height:1.35
+}
+@media(max-width:450px){
+ .food-nutrition-card{padding:14px 13px;gap:9px}
+}
 </style>
 </head>
 <body>
@@ -2230,16 +2249,19 @@ function todayNutritionRing(label,value,goal,kind,unit='g',incomplete=false){
   '<span class="today-nutrition-goal">'+(target>0?'/ '+h(fmt(target,0))+' ':'')+unit+(incomplete?'*':'')+'</span></div></div>'+
   '<div class="today-nutrition-label">'+h(label)+(complete?'<span class="today-nutrition-done" aria-label="Goal reached">✓</span>':'')+'</div></div>';
 }
+function nutritionRings(totals){
+ return '<div class="today-nutrition-rings">'+
+  todayNutritionRing('Protein',totals.protein,state.settings.proteinGoal,'protein')+
+  todayNutritionRing('Fiber',totals.fiber,state.settings.fiberGoal,'fiber')+
+  todayNutritionRing('Calories',totals.calories,state.settings.calorieGoal,'calories','kcal',totals.calorieMissing>0)+
+  '</div>';
+}
 function todayNutritionCard(date,totals){
  const title=date===TODAY?'Today’s nutrition':'Nutrition for this day';
  return '<section class="card dark span12 today-nutrition-card" aria-label="'+title+'">'+
   '<div class="today-nutrition-head"><h2>'+title+'</h2>'+
   '<button type="button" class="btn solidlight" data-tab="food">Log food →</button></div>'+
-  '<div class="today-nutrition-rings">'+
-  todayNutritionRing('Protein',totals.protein,state.settings.proteinGoal,'protein')+
-  todayNutritionRing('Fiber',totals.fiber,state.settings.fiberGoal,'fiber')+
-  todayNutritionRing('Calories',totals.calories,state.settings.calorieGoal,'calories','kcal',totals.calorieMissing>0)+
-  '</div></section>';
+  nutritionRings(totals)+'</section>';
 }
 function dashboard(){
  const date=homeViewDate(),t=dailyTotals(date);
@@ -2512,21 +2534,14 @@ function lift(){
 function exerciseCard(id,index,s,w){const e=EX[id],sets=s.sets[id]||[{},{},{}],label=e.style==='time'?'Seconds':e.perSide?'Reps / side':'Reps';return `<article class="exercise"><div class="ex-head"><div><div class="ex-tag">${String(index+1).padStart(2,'0')} · ${e.type==='upper'?'Upper body':e.type==='lower'?'Lower body':'Core'}</div><div class="ex-title">${h(e.name)}</div><div class="tiny">3 sets · ${range(e,w)}${e.perSide?'/side':''}${e.track==='body'?' · bodyweight':''}</div></div><a class="btn small" style="flex-shrink:0" href="${demoUrl(id)}" target="_blank" rel="noopener noreferrer" aria-label="Find ${h(e.name)} demonstration videos">▶ Video</a></div><div class="tiny" style="margin:8px 0 0">Video opens YouTube search results for this movement; choose a qualified trainer's demonstration.</div><div class="ex-hint">↗ ${h(exerciseHint(id,w))}</div><table class="sets-table"><thead><tr><th>Set</th><th>${e.track==='weight'?'Load ('+h(state.settings.weightUnit)+')':'Load *'}</th><th>${label}</th><th>Reps left</th></tr></thead><tbody>${[0,1,2].map(i=>{const x=sets[i]||{};return `<tr><td>${i+1}</td><td><input type="number" inputmode="decimal" min="0" step="0.5" aria-label="${h(e.name)} set ${i+1} load" data-set="weight" data-ex="${id}" data-idx="${i}" value="${h(x.weight??'')}" placeholder="${e.track==='body'?'0':'—'}"></td><td><input type="number" inputmode="numeric" min="0" step="1" aria-label="${h(e.name)} set ${i+1} ${label}" data-set="reps" data-ex="${id}" data-idx="${i}" value="${h(x.reps??'')}" placeholder="—"></td><td><select aria-label="${h(e.name)} set ${i+1} reps left" data-set="rir" data-ex="${id}" data-idx="${i}"><option value="">—</option>${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${String(x.rir??'')===String(n)?'selected':''}>${n}${n===5?'+':''}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table><details><summary>Form cues & substitution</summary><p class="fineprint" style="margin:8px 0 0">${h(e.cue)} <strong>Alternative:</strong> ${h(e.alt)}. ${e.track==='body'?'* For bodyweight work, load can remain 0.':'Log the combined load consistently for dumbbells (e.g., per dumbbell, not the sum) and add a note if needed.'}</p></details></article>`}
 function food(){
  const t=dailyTotals(ui.foodDate),todayItems=state.foods.filter(f=>f.date===ui.foodDate);
- const calorieGoal=Number(state.settings.calorieGoal)||0;
- const calNote=t.calorieMissing?'<p class="tiny">* Calorie total is partial: '+t.calorieMissing+' logged '+
+ const calNote=t.calorieMissing?'<p class="tiny food-calorie-note">* Calorie total is partial: '+t.calorieMissing+' logged '+
   (t.calorieMissing===1?'item has':'items have')+' no calorie value. Older entries were not estimated automatically.</p>':'';
- const metric=(label,value,goal,kind,unit)=>
-  '<div class="food-daily-metric"><div class="daily-row"><span class="kicker">'+label+'</span><strong>'+
-  fmt(value,kind==='calories'?0:1)+unit+
-  (goal>0?' <small>/ '+fmt(goal)+' '+unit+'</small>':'')+'</strong></div>'+
-  prog(value,goal,kind==='fiber'?'fiber':'')+'</div>';
  return sectionDateBar('food')+
-  '<div class="grid"><section class="card span8"><div class="row spread wrap"><h2>Daily food log</h2></div>'+
-  '<div class="food-daily-metrics">'+
-    metric('Protein',t.protein,Number(state.settings.proteinGoal)||0,'protein','g')+
-    metric('Fiber',t.fiber,Number(state.settings.fiberGoal)||0,'fiber','g')+
-    metric('Calories',t.calories,calorieGoal,'calories','kcal')+
-  '</div>'+calNote+
+  '<div class="grid">'+
+  '<section class="card dark span12 today-nutrition-card food-nutrition-card" aria-label="Daily nutrition">'+
+   '<div class="today-nutrition-head"><h2>Daily nutrition</h2></div>'+
+   nutritionRings(t)+calNote+'</section>'+
+  '<section class="card span8">'+
   '<h3>Add an item or whole meal</h3>'+
   '<form id="foodForm" class="food-form">'+
    '<div class="field"><label for="fName">Food / meal</label><input id="fName" name="name" required placeholder="e.g. chicken + lentils"></div>'+
