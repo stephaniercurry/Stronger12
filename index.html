@@ -1115,9 +1115,14 @@ function weeklyCalendar(viewDate=TODAY){
 function header(title,subtitle){return `<div class="masthead ${ui.tab==='home'?'home-head':''}"><div><div class="eyebrow">YOUR PRIVATE DAILY HUB</div><h1>${title}</h1><p class="lead">${subtitle}</p></div>${['lift','settings'].includes(ui.tab)?'<span class="pill">Cycle '+(activeCycleIndex()+1)+' · Week '+(ui.tab==='lift'?ui.week:currentWeek())+' / 12</span>':''}</div>${storageFailed?'<div id="storageWarn" class="notice warn">Browser storage is unavailable. Export a JSON backup regularly; entries may not persist here.</div>':''}`}
 function weekSelect(){return `<div class="weekpicker noprint"><button class="btn small" data-week-step="-1" ${ui.week<=1?'disabled':''} aria-label="Previous week">‹</button><select id="weekPick" aria-label="Program week">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${ui.week===i+1?'selected':''}>Week ${i+1}</option>`).join('')}</select><button class="btn small" data-week-step="1" ${ui.week>=12?'disabled':''} aria-label="Next week">›</button></div>`}
 
-const TASK_REPEATS={none:'One time',daily:'Every day',weekdays:'Weekdays',weekly:'Every week',interval:'Every N days'};
+const TASK_REPEATS={none:'One time',daily:'Every day',weekdays:'Weekdays',weekly:'Every week',monthly:'Every month',interval:'Every N days'};
 function repeatEveryDays(t){const n=Number(t.repeatDays);return Number.isInteger(n)&&n>=1&&n<=365?n:1}
 function taskRepeatLabel(t){return t.repeat==='interval'?'Every '+repeatEveryDays(t)+' '+(repeatEveryDays(t)===1?'day':'days'):TASK_REPEATS[t.repeat]||t.repeat||'One time'};
+/* Repeat on the original day of each month; use the last day when shorter. */
+function monthlyTaskDate(due,year,month){
+ const day=Number(due.slice(8,10)),last=new Date(year,month+1,0).getDate();
+ return iso(new Date(year,month,Math.min(day,last),12));
+}
 function taskDone(t,date=TODAY){
  if((t.repeat||'none')==='none')return !!t.done;
  return Array.isArray(t.completedDates)&&t.completedDates.includes(date);
@@ -1129,6 +1134,10 @@ function taskOccurs(t,date=TODAY){
  if(repeat==='daily')return true;
  if(repeat==='weekdays'){const day=dateOf(date).getDay();return day>=1&&day<=5}
  if(repeat==='weekly')return daysBetween(due,date)%7===0;
+ if(repeat==='monthly'){
+  const d=dateOf(date);
+  return date===monthlyTaskDate(due,d.getFullYear(),d.getMonth());
+ }
  if(repeat==='interval')return daysBetween(due,date)%repeatEveryDays(t)===0;
  return false;
 }
@@ -1164,6 +1173,13 @@ function nextTaskDate(t){
  const earliest=addDays(TODAY,1);
  if(due>=earliest)return due;
  if(repeat==='daily')return earliest;
+ if(repeat==='monthly'){
+  const current=dateOf(earliest);
+  const thisMonth=monthlyTaskDate(due,current.getFullYear(),current.getMonth());
+  if(thisMonth>=earliest)return thisMonth;
+  const following=new Date(current.getFullYear(),current.getMonth()+1,1,12);
+  return monthlyTaskDate(due,following.getFullYear(),following.getMonth());
+ }
  if(repeat==='weekdays'){
   let d=earliest;for(let i=0;i<7;i++){const n=dateOf(d).getDay();if(n>=1&&n<=5)return d;d=addDays(d,1)}return earliest;
  }
@@ -1262,6 +1278,7 @@ function plannerTaskForm(){
  '<div class="field"><label for="taskPriority">Priority</label><select id="taskPriority" name="priority"><option value="normal" '+((edit?.priority||'normal')==='normal'?'selected':'')+'>Normal</option><option value="high" '+(edit?.priority==='high'?'selected':'')+'>Important</option></select></div></div>'+
  '<div class="field"><label for="taskRepeat">Repeat</label><select id="taskRepeat" name="repeat">'+Object.entries(TASK_REPEATS).map(([value,label])=>'<option value="'+value+'" '+((edit?.repeat||'none')===value?'selected':'')+'>'+h(label)+'</option>').join('')+'</select></div>'+
  '<div class="field task-interval-field" id="taskIntervalField" '+((edit?.repeat||'none')==='interval'?'':'style="display:none"')+'><label for="taskIntervalDays">Repeat every how many days?</label><input id="taskIntervalDays" name="repeatDays" type="number" inputmode="numeric" min="1" max="365" step="1" value="'+h(edit?.repeatDays||3)+'" '+((edit?.repeat||'none')==='interval'?'required':'')+'><small class="tiny">Starts on the due date, then repeats every N calendar days.</small></div>'+
+ '<p class="tiny" id="taskMonthlyHint" '+((edit?.repeat||'none')==='monthly'?'':'style="display:none"')+'>Repeats on the due-date day each month. For the 29th–31st, shorter months use their last day.</p>'+
  '<div class="field"><label for="taskNotes">Notes (optional)</label><textarea id="taskNotes" name="notes" rows="2" maxlength="1200" placeholder="Details or next step…">'+h(edit?.notes||'')+'</textarea></div>'+
  '<div class="buttonrow"><button type="submit" class="btn primary">'+(edit?'Save changes':'Save task')+'</button><button type="button" class="btn" data-task-cancel="1">Cancel</button></div></form></div>';
 }
@@ -3249,7 +3266,7 @@ if(el.id==='importantType'||el.id==='importantRepeat'){
  }
  return
 }
-if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),days=document.getElementById('taskIntervalDays');if(box&&days){box.style.display=el.value==='interval'?'':'none';days.required=el.value==='interval'}return}if(el.dataset.setting==='calorieGoal'){
+if(el.id==='taskRepeat'){const box=document.getElementById('taskIntervalField'),days=document.getElementById('taskIntervalDays'),hint=document.getElementById('taskMonthlyHint');if(box&&days){box.style.display=el.value==='interval'?'':'none';days.required=el.value==='interval'}if(hint)hint.style.display=el.value==='monthly'?'':'none';return}if(el.dataset.setting==='calorieGoal'){
  const raw=el.value.trim(),goal=raw===''?null:Number(raw);
  if(goal!==null&&(!Number.isFinite(goal)||goal<=0||goal>20000)){
   alert('Enter a positive calorie goal, or leave it blank to remove the goal.');render();return
