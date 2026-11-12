@@ -3034,23 +3034,59 @@ if(b.dataset.classDelete||b.dataset.yogaDelete){
  ui.newClassFormDate=null;save();render();return
 }
 
-if(b.dataset.weekFoodToggle){ui.weekFoodOpen=!ui.weekFoodOpen;render();return}
+if(b.dataset.weekFoodToggle){ui.weekFoodOpen=!ui.weekFoodOpen;ui.swipedWeekFoodId=null;render();return}
 if(b.dataset.weekIdeaToggle){
  const id=b.dataset.weekIdeaToggle;
  if(!state.dinnerIdeas.some(x=>x.id===id))return;
- state.weekFoodIdeas=state.weekFoodIdeas.includes(id)?state.weekFoodIdeas.filter(x=>x!==id):[...state.weekFoodIdeas,id];
+ if(state.weekFoodIdeas.includes(id)){
+  state.weekFoodIdeas=state.weekFoodIdeas.filter(x=>x!==id);
+  state.weekFoodMade=state.weekFoodMade.filter(key=>key!=='r:'+id);
+ }else state.weekFoodIdeas.push(id);
  save();render();return
 }
-if(b.dataset.weekFoodRemove){
- const id=b.dataset.weekFoodRemove;
- if(!state.weekFoodIdeas.includes(id))return;
- state.weekFoodIdeas=state.weekFoodIdeas.filter(x=>x!==id);save();render();return
+if(b.dataset.weekFoodMade){
+ const key=b.dataset.weekFoodMade,id=key.slice(2);
+ const valid=key.startsWith('r:')?state.weekFoodIdeas.includes(id):
+  key.startsWith('q:')&&state.quickWeekFoodIdeas.some(x=>x.id===id);
+ if(!valid)return;
+ state.weekFoodMade=state.weekFoodMade.includes(key)?state.weekFoodMade.filter(x=>x!==key):[...state.weekFoodMade,key];
+ ui.swipedWeekFoodId=null;save();render();return
 }
-if(b.dataset.weekFoodQuickRemove){
- const id=b.dataset.weekFoodQuickRemove;
- if(!state.quickWeekFoodIdeas.some(x=>x.id===id))return;
- state.quickWeekFoodIdeas=state.quickWeekFoodIdeas.filter(x=>x.id!==id);
- save();render();return
+if(b.dataset.weekFoodReveal){
+ const key=b.dataset.weekFoodReveal,id=key.slice(2);
+ const valid=key.startsWith('r:')?state.weekFoodIdeas.includes(id):
+  key.startsWith('q:')&&state.quickWeekFoodIdeas.some(x=>x.id===id);
+ if(!valid)return;
+ ui.swipedWeekFoodId=ui.swipedWeekFoodId===key?null:key;render();return
+}
+if(b.dataset.weekFoodEdit){
+ const key=b.dataset.weekFoodEdit,id=key.slice(2);
+ ui.swipedWeekFoodId=null;
+ if(key.startsWith('q:')){
+  if(!state.quickWeekFoodIdeas.some(x=>x.id===id))return;
+  ui.editQuickWeekFoodId=id;ui.weekFoodOpen=true;render();
+  document.getElementById('weekFoodQuickName')?.focus?.({preventScroll:true});
+  document.getElementById('weekFoodQuickForm')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});return
+ }
+ const idea=state.dinnerIdeas.find(x=>x.id===id);
+ if(!key.startsWith('r:')||!state.weekFoodIdeas.includes(id)||!idea)return;
+ ui.recipeOpen=true;ui.recipeTab=recipeCategory(idea);ui.recipeSubtype='all';
+ ui.editDinnerId=id;ui.swipedDinnerId=null;ui.dinnerNotice='';ui.tab='life';render();
+ document.getElementById('dinnerIdeasSection')?.scrollIntoView?.({block:'start',behavior:'smooth'});return
+}
+if(b.dataset.weekFoodEditCancel){ui.editQuickWeekFoodId=null;ui.swipedWeekFoodId=null;render();return}
+if(b.dataset.weekFoodDelete){
+ const key=b.dataset.weekFoodDelete,id=key.slice(2);
+ if(key.startsWith('r:')){
+  if(!state.weekFoodIdeas.includes(id))return;
+  state.weekFoodIdeas=state.weekFoodIdeas.filter(x=>x!==id);
+ }else if(key.startsWith('q:')){
+  if(!state.quickWeekFoodIdeas.some(x=>x.id===id))return;
+  state.quickWeekFoodIdeas=state.quickWeekFoodIdeas.filter(x=>x.id!==id);
+  if(ui.editQuickWeekFoodId===id)ui.editQuickWeekFoodId=null;
+ }else return;
+ state.weekFoodMade=state.weekFoodMade.filter(x=>x!==key);
+ ui.swipedWeekFoodId=null;save();render();return
 }
 if(b.dataset.weekFoodBrowse||b.dataset.weekFoodRecipe){
  const idea=b.dataset.weekFoodRecipe?state.dinnerIdeas.find(x=>x.id===b.dataset.weekFoodRecipe):null;
@@ -3089,6 +3125,7 @@ if(b.dataset.dinnerDelete){
  if(idea&&confirm('Delete recipe idea: '+idea.name+'?')){
   state.dinnerIdeas=state.dinnerIdeas.filter(x=>x.id!==idea.id);
    state.weekFoodIdeas=state.weekFoodIdeas.filter(id=>id!==idea.id);
+    state.weekFoodMade=state.weekFoodMade.filter(key=>key!=='r:'+idea.id);
   if(ui.editDinnerId===idea.id)ui.editDinnerId=null;
   if(ui.swipedDinnerId===idea.id)ui.swipedDinnerId=null;
   if(ui.expandedDinnerId===idea.id)ui.expandedDinnerId=null;
@@ -3159,14 +3196,15 @@ if(b.dataset.print){window.print();return}});
 let rowTouchStart=null;
 document.addEventListener('touchstart',ev=>{
  const target=ev.target;
- const grocery=target.closest?.('[data-grocery-swipe]');
- const money=grocery?null:target.closest?.('[data-money-tx-swipe]');
- const dinner=grocery||money?null:target.closest?.('[data-dinner-swipe]');
- const event=grocery||money||dinner?null:target.closest?.('[data-event-swipe]');
- const task=grocery||money||dinner||event?null:target.closest?.('[data-task-swipe]');
- if((!grocery&&!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
- const t=ev.touches[0],kind=grocery?'grocery':money?'money':dinner?'dinner':event?'event':'task',row=grocery||money||dinner||event||task;
- const key=kind==='grocery'?'grocerySwipe':kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
+ const weekFood=target.closest?.('[data-week-food-swipe]');
+ const grocery=weekFood?null:target.closest?.('[data-grocery-swipe]');
+ const money=weekFood||grocery?null:target.closest?.('[data-money-tx-swipe]');
+ const dinner=weekFood||grocery||money?null:target.closest?.('[data-dinner-swipe]');
+ const event=weekFood||grocery||money||dinner?null:target.closest?.('[data-event-swipe]');
+ const task=weekFood||grocery||money||dinner||event?null:target.closest?.('[data-task-swipe]');
+ if((!weekFood&&!grocery&&!money&&!dinner&&!event&&!task)||ev.touches.length!==1){rowTouchStart=null;return}
+ const t=ev.touches[0],kind=weekFood?'weekFood':grocery?'grocery':money?'money':dinner?'dinner':event?'event':'task',row=weekFood||grocery||money||dinner||event||task;
+ const key=kind==='weekFood'?'weekFoodSwipe':kind==='grocery'?'grocerySwipe':kind==='money'?'moneyTxSwipe':kind==='dinner'?'dinnerSwipe':kind==='event'?'eventSwipe':'taskSwipe';
  rowTouchStart={kind,id:row.dataset[key],x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener('touchcancel',()=>{rowTouchStart=null},{passive:true});
@@ -3175,7 +3213,8 @@ document.addEventListener('touchend',ev=>{
  if(!start||ev.changedTouches.length!==1)return;
  const t=ev.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y;
  if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.25)return;
- if(start.kind==='grocery'){ui.swipedGroceryId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ if(start.kind==='weekFood'){ui.swipedWeekFoodId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedGroceryId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
+ else if(start.kind==='grocery'){ui.swipedGroceryId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  else if(start.kind==='money'){ui.swipedMoneyTxId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.selectedImportantId=null;ui.swipedGroceryId=null}
  else if(start.kind==='dinner'){ui.swipedDinnerId=dx<0?start.id:null;ui.swipedTaskId=null;ui.selectedImportantId=null;ui.swipedMoneyTxId=null}
  else if(start.kind==='event'){ui.selectedImportantId=dx<0?start.id:null;ui.swipedTaskId=null;ui.swipedDinnerId=null;ui.swipedMoneyTxId=null}
@@ -3538,8 +3577,10 @@ if(ev.target.id==='weekFoodQuickForm'){
   ev.preventDefault();
   const name=String(new FormData(ev.target).get('name')||'').trim();
   if(!name||name.length>140){alert('Enter a short food idea.');return}
-  state.quickWeekFoodIdeas.push({id:uid(),name});
-  ui.weekFoodOpen=true;
+  const existing=state.quickWeekFoodIdeas.find(x=>x.id===ui.editQuickWeekFoodId);
+  if(existing)existing.name=name;
+  else state.quickWeekFoodIdeas.push({id:uid(),name});
+  ui.editQuickWeekFoodId=null;ui.swipedWeekFoodId=null;ui.weekFoodOpen=true;
   save();render();return
  }
  if(ev.target.id==='groceryForm'){
