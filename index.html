@@ -942,6 +942,24 @@ button.dinner-item-name{border:0;background:transparent;padding:8px 0;display:fl
 .week-food-quick-fields input{min-width:130px}
 @media(max-width:400px){.week-food-swipe .week-food-row{gap:7px;padding:5px 5px 5px 7px}.week-food-swipe .week-food-name{font-size:12.5px}}
 @media(prefers-reduced-motion:reduce){.week-food-swipe .week-food-row{transition:none}}
+/* Food log uses the same compact swipe-to-edit/delete pattern as groceries. */
+.food-form-actions{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.food-form-actions .btn{grid-column:auto!important;flex:0 0 auto}
+.food-log-list{display:grid;gap:4px;margin-top:10px;min-width:0}
+.food-log-swipe.task-swipe{border:1px solid #e6e9f0;border-radius:9px;min-width:0;background:#eef2f2;isolation:isolate;contain:paint;touch-action:pan-y}
+.food-log-swipe:not(.is-revealed) .task-swipe-actions{display:none}
+.food-log-swipe .task-swipe-actions{width:134px}
+.food-log-swipe .task-edit-reveal,.food-log-swipe .task-delete-reveal{font-size:12px}
+.food-log-swipe .food-item{display:flex;align-items:center;gap:9px;min-height:49px;padding:7px 7px 7px 10px;margin:0;border:0;background:#fff;position:relative;z-index:1;transition:transform .18s ease;will-change:auto}
+.food-log-swipe.is-revealed .food-item{transform:translateX(-134px)}
+.food-log-copy{display:grid;gap:3px;flex:1;min-width:0}
+.food-log-title{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;min-width:0;line-height:1.2}
+.food-log-title strong{font-size:13px;overflow-wrap:anywhere;min-width:0}
+.food-log-title .food-meal{font-size:9px;flex:0 0 auto}
+.food-log-swipe .food-numbers{font-size:10.5px;line-height:1.3;overflow-wrap:anywhere}
+.food-log-swipe .task-more{min-width:32px;min-height:36px;flex:0 0 32px;color:#78859a}
+@media(max-width:400px){.food-log-swipe .food-item{gap:7px;padding:6px 5px 6px 7px}.food-log-title strong{font-size:12.5px}}
+@media(prefers-reduced-motion:reduce){.food-log-swipe .food-item{transition:none}}
 </style>
 </head>
 <body>
@@ -1077,7 +1095,7 @@ const FOODS=[
 {name:'1 tbsp ground flaxseed',protein:1.3,fiber:2,calories:37}
 ];
 const NAV=[['home','⌂','Today'],['tasks','▦','Planner'],['lift','▣','Workout'],['food','◕','Food'],['life','✺','Life'],['settings','⚙','Settings']];
-const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,swipedGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,swipedWeekFoodId:null,editQuickWeekFoodId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
+const ui={tab:'home',week:currentWeek(),day:'tue',foodDate:TODAY,editFoodId:null,swipedFoodId:null,chartEx:'squat',taskFilter:'today',editTaskId:null,plannerForm:null,swipedTaskId:null,deletedTask:null,editYogaId:null,editGroceryId:null,swipedGroceryId:null,todayGroceriesOpen:false,todayGroceriesShowBought:false,editDinnerId:null,swipedDinnerId:null,expandedDinnerId:null,recipeOpen:false,weekFoodOpen:false,swipedWeekFoodId:null,editQuickWeekFoodId:null,recipeTab:'dinner',recipeSubtype:'all',dinnerNotice:'',yogaDate:TODAY,editBirthdayId:null,editImportantId:null,selectedImportantId:null,importantOpen:false,importantPanelOpen:false,importantMonth:TODAY.slice(0,7),importantDate:TODAY,moneyOpen:false,moneyNew:false,moneyEditId:null,moneySelectedId:null,moneyAction:null,moneyMessage:'',moneyHistoryOpen:false,moneyTxNew:false,moneyTxEditId:null,moneyActivityType:'spend',swipedMoneyTxId:null,todaySpendId:null,todayMoneyMessage:'',openCompletedWorkoutKey:null,newClassFormDate:null,homeDate:null,homeDatePickerOpen:false,workoutDate:null,workoutDatePickerOpen:false,foodDatePickerOpen:false,plannerAgendaAnchor:null,plannerAgendaCount:14,plannerResetScroll:false,plannerMonthExpanded:false,plannerEntryDraft:null,holidaySettingsOpen:false};
 function currentWeek(){return Math.max(1,Math.min(12,Math.floor(daysBetween(activeCycle().startDate,TODAY)/7)+1))}
 function weekDate(w){return addDays(activeCycle().startDate,(w-1)*7)}
 function scheduledDate(w,day){return addDays(weekDate(w),{mon:0,tue:1,wed:2,thu:3,fri:4}[day])}
@@ -2541,7 +2559,7 @@ function openWorkoutSlot(){
 function setTabViewDate(section,date){
  if(!validCalendarDate(date))return;
  if(section==='food'){
-  ui.foodDate=date;ui.foodDatePickerOpen=false;render();return
+  ui.foodDate=date;ui.foodDatePickerOpen=false;ui.editFoodId=null;ui.swipedFoodId=null;render();return
  }
  if(section==='lift')setWorkoutViewDate(date);
 }
@@ -2612,8 +2630,21 @@ function lift(){
  '<h3>Back-conscious options</h3><p class="fineprint">Use supported movements and stop anything that increases pain. Recovery weeks are built into each cycle.</p></section></div>';
 }
 function exerciseCard(id,index,s,w){const e=EX[id],sets=s.sets[id]||[{},{},{}],label=e.style==='time'?'Seconds':e.perSide?'Reps / side':'Reps';return `<article class="exercise"><div class="ex-head"><div><div class="ex-tag">${String(index+1).padStart(2,'0')} · ${e.type==='upper'?'Upper body':e.type==='lower'?'Lower body':'Core'}</div><div class="ex-title">${h(e.name)}</div><div class="tiny">3 sets · ${range(e,w)}${e.perSide?'/side':''}${e.track==='body'?' · bodyweight':''}</div></div><a class="btn small" style="flex-shrink:0" href="${demoUrl(id)}" target="_blank" rel="noopener noreferrer" aria-label="Find ${h(e.name)} demonstration videos">▶ Video</a></div><div class="tiny" style="margin:8px 0 0">Video opens YouTube search results for this movement; choose a qualified trainer's demonstration.</div><div class="ex-hint">↗ ${h(exerciseHint(id,w))}</div><table class="sets-table"><thead><tr><th>Set</th><th>${e.track==='weight'?'Load ('+h(state.settings.weightUnit)+')':'Load *'}</th><th>${label}</th><th>Reps left</th></tr></thead><tbody>${[0,1,2].map(i=>{const x=sets[i]||{};return `<tr><td>${i+1}</td><td><input type="number" inputmode="decimal" min="0" step="0.5" aria-label="${h(e.name)} set ${i+1} load" data-set="weight" data-ex="${id}" data-idx="${i}" value="${h(x.weight??'')}" placeholder="${e.track==='body'?'0':'—'}"></td><td><input type="number" inputmode="numeric" min="0" step="1" aria-label="${h(e.name)} set ${i+1} ${label}" data-set="reps" data-ex="${id}" data-idx="${i}" value="${h(x.reps??'')}" placeholder="—"></td><td><select aria-label="${h(e.name)} set ${i+1} reps left" data-set="rir" data-ex="${id}" data-idx="${i}"><option value="">—</option>${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${String(x.rir??'')===String(n)?'selected':''}>${n}${n===5?'+':''}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table><details><summary>Form cues & substitution</summary><p class="fineprint" style="margin:8px 0 0">${h(e.cue)} <strong>Alternative:</strong> ${h(e.alt)}. ${e.track==='body'?'* For bodyweight work, load can remain 0.':'Log the combined load consistently for dumbbells (e.g., per dumbbell, not the sum) and add a note if needed.'}</p></details></article>`}
+function foodLogRow(f){
+ const revealed=ui.swipedFoodId===f.id;
+ return '<div class="task-swipe food-log-swipe'+(revealed?' is-revealed':'')+'" data-food-swipe="'+h(f.id)+'">'+
+  '<div class="task-swipe-actions">'+
+   '<button type="button" class="task-edit-reveal" data-food-edit="'+h(f.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Edit '+h(f.name)+'">Edit</button>'+
+   '<button type="button" class="task-delete-reveal" data-food-delete="'+h(f.id)+'" tabindex="'+(revealed?'0':'-1')+'" aria-label="Delete '+h(f.name)+'">Delete</button></div>'+
+  '<div class="food-item">'+
+   '<div class="food-log-copy"><div class="food-log-title"><strong>'+h(f.name)+'</strong><span class="food-meal">'+h(f.meal)+'</span></div>'+
+    '<div class="food-numbers">'+fmt(f.protein,1)+'g protein · '+fmt(f.fiber,1)+'g fiber · '+
+     (foodHasCalories(f)?fmt(f.calories,0)+' kcal':'calories not recorded')+'</div></div>'+
+   '<button type="button" class="task-more" data-food-reveal="'+h(f.id)+'" aria-expanded="'+revealed+'" aria-label="Show Edit and Delete for '+h(f.name)+'" title="Swipe left or tap for Edit and Delete">···</button>'+
+  '</div></div>';
+}
 function food(){
- const t=dailyTotals(ui.foodDate),todayItems=state.foods.filter(f=>f.date===ui.foodDate);
+ const t=dailyTotals(ui.foodDate),todayItems=state.foods.filter(f=>f.date===ui.foodDate),editing=state.foods.find(f=>f.id===ui.editFoodId&&f.date===ui.foodDate);
  const calNote=t.calorieMissing?'<p class="tiny food-calorie-note">* Calorie total is partial: '+t.calorieMissing+' logged '+
   (t.calorieMissing===1?'item has':'items have')+' no calorie value. Older entries were not estimated automatically.</p>':'';
  return sectionDateBar('food')+
@@ -2622,22 +2653,18 @@ function food(){
    '<div class="today-nutrition-head"><h2>Daily nutrition</h2></div>'+
    nutritionRings(t)+calNote+'</section>'+
   '<section class="card span8">'+
-  '<h3>Add an item or whole meal</h3>'+
+  '<h3>'+(editing?'Edit food entry':'Add an item or whole meal')+'</h3>'+
   '<form id="foodForm" class="food-form">'+
-   '<div class="field"><label for="fName">Food / meal</label><input id="fName" name="name" required placeholder="e.g. chicken + lentils"></div>'+
-   '<div class="field"><label for="fMeal">Meal</label><select id="fMeal" name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div>'+
-   '<div class="field"><label for="fProtein">Protein (g)</label><input id="fProtein" type="number" inputmode="decimal" name="protein" min="0" step="0.1" required placeholder="0"></div>'+
-   '<div class="field"><label for="fFiber">Fiber (g)</label><input id="fFiber" type="number" inputmode="decimal" name="fiber" min="0" step="0.1" required placeholder="0"></div>'+
-   '<div class="field"><label for="fCalories">Calories (kcal, optional)</label><input id="fCalories" type="number" inputmode="numeric" name="calories" min="0" step="1" placeholder="Leave blank if unknown"></div>'+
-   '<button type="submit" class="btn primary">+ Add</button></form><div class="divider"></div>'+
+   '<div class="field"><label for="fName">Food / meal</label><input id="fName" name="name" required placeholder="e.g. chicken + lentils" value="'+h(editing?.name||'')+'"></div>'+
+   '<div class="field"><label for="fMeal">Meal</label><select id="fMeal" name="meal">'+['Breakfast','Lunch','Dinner','Snack'].map(meal=>'<option'+((editing?.meal||'Breakfast')===meal?' selected':'')+'>'+meal+'</option>').join('')+'</select></div>'+
+   '<div class="field"><label for="fProtein">Protein (g)</label><input id="fProtein" type="number" inputmode="decimal" name="protein" min="0" step="0.1" required placeholder="0" value="'+h(editing?.protein??'')+'"></div>'+
+   '<div class="field"><label for="fFiber">Fiber (g)</label><input id="fFiber" type="number" inputmode="decimal" name="fiber" min="0" step="0.1" required placeholder="0" value="'+h(editing?.fiber??'')+'"></div>'+
+   '<div class="field"><label for="fCalories">Calories (kcal, optional)</label><input id="fCalories" type="number" inputmode="numeric" name="calories" min="0" step="1" placeholder="Leave blank if unknown" value="'+(foodHasCalories(editing)?h(editing.calories):'')+'"></div>'+
+   '<div class="buttonrow food-form-actions"><button type="submit" class="btn primary">'+(editing?'Save changes':'+ Add')+'</button>'+(editing?'<button type="button" class="btn" data-food-cancel="1">Cancel</button>':'')+'</div></form><div class="divider"></div>'+
   '<h3>Logged '+(ui.foodDate===TODAY?'today':'on this day')+
    (todayItems.length?' <small>('+todayItems.length+' items)</small>':'')+'</h3>'+
-  (todayItems.length?todayItems.map(f=>
-    '<div class="food-item"><div><div class="food-meal">'+h(f.meal)+'</div><strong>'+h(f.name)+'</strong>'+
-    '<div class="food-numbers">'+fmt(f.protein,1)+'g protein · '+fmt(f.fiber,1)+'g fiber · '+
-    (foodHasCalories(f)?fmt(f.calories,0)+' kcal':'calories not recorded')+'</div></div>'+
-    '<button class="btn small danger" data-delete-food="'+h(f.id)+'" aria-label="Delete '+h(f.name)+'">Remove</button></div>'
-   ).join(''):'<div class="empty">Nothing logged for this date yet. Add a meal or use a quick-add food.</div>')+
+  (todayItems.length?'<div class="food-log-list">'+todayItems.map(foodLogRow).join('')+'</div>':
+   '<div class="empty">Nothing logged for this date yet. Add a meal or use a quick-add food.</div>')+
   '</section>'+
   '<section class="card span4"><h2>Quick add</h2>'+
   '<p class="tiny">Approximate values vary by product and preparation. Quick-add foods are assigned to the meal selected below.</p>'+
