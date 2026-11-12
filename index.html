@@ -2907,6 +2907,64 @@ async function shareBackup(){const file=backupFile();if(navigator.canShare&&navi
 async function exportData(kind){if(kind==='share'){const name='stronger12-backup-'+iso(new Date())+'.json';const file=new File([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Stronger / 12 backup'});return;}catch(err){if(err&&err.name==='AbortError')return;}}dl(new Blob([await file.text()],{type:'application/json'}),name);alert('Backup downloaded. Save the file to iCloud Drive or Files so it is not only on this phone.');return;}if(kind==='json'){const file=backupFile();dl(file,file.name);markBackup();render();return}const lines=['cycle,date,week,day,routine,location,exercise,set,load,unit,reps_or_seconds,reps_left,session_completed,notes'];Object.values(state.workouts).sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(s=>Object.entries(s.sets||{}).forEach(([id,sets])=>sets.forEach((x,i)=>{if(!x||(!x.reps&&!x.weight))return;lines.push([(s.cycleId||'cycle-1'),s.date,s.week,s.day,sessionRoutine(s),s.venue||'home',EX[id]?.name||id,i+1,x.weight??'',state.settings.weightUnit,x.reps??'',x.rir??'',s.completed?'yes':'no',s.notes??''].map(csvCell).join(','))})));dl(new Blob([lines.join('\n')],{type:'text/csv'}),'stronger12-workouts-'+TODAY+'.csv');const foods=['date,meal,food,protein_g,fiber_g,calories_kcal',...state.foods.map(f=>[f.date,f.meal,f.name,f.protein,f.fiber,foodHasCalories(f)?f.calories:''].map(csvCell).join(','))];dl(new Blob([foods.join('\n')],{type:'text/csv'}),'stronger12-foods-'+TODAY+'.csv')}
 function isWholeNumber(n){return Number.isFinite(n)&&n>0}
 document.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+if(b.dataset.brainToggle){
+ if(ui.tab!=='home')return;
+ ui.brainOpen=!ui.brainOpen;ui.brainMessage='';ui.brainCell=null;render();return
+}
+if(b.dataset.brainReset){
+ if(ui.tab!=='home')return;
+ const date=homeViewDate();
+ if(state.brainPuzzles)delete state.brainPuzzles[date];
+ ui.brainOpen=true;ui.brainCell=null;ui.brainMessage='';save();render();return
+}
+if(b.dataset.brainCell!==undefined){
+ if(ui.tab!=='home')return;
+ const p=brainPuzzleForDate(homeViewDate()),idx=Number(b.dataset.brainCell);
+ if(p.kind!=='sudoku'||!Number.isInteger(idx)||idx<0||idx>=16||p.givens[idx])return;
+ ui.brainCell=idx;ui.brainMessage='';render();return
+}
+if(b.dataset.brainNumber!==undefined||b.dataset.brainClear){
+ if(ui.tab!=='home')return;
+ const date=homeViewDate(),p=brainPuzzleForDate(date);
+ if(p.kind!=='sudoku')return;
+ const editable=p.givens.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
+ const idx=editable.includes(ui.brainCell)?ui.brainCell:editable[0];
+ if(!Number.isInteger(idx))return;
+ const entry=brainEntry(date);
+ if(entry.done)return;
+ const value=b.dataset.brainClear?0:Number(b.dataset.brainNumber);
+ if(!Number.isInteger(value)||value<0||value>4)return;
+ if(!Array.isArray(entry.cells))entry.cells=[];
+ entry.cells[idx]=value;
+ ui.brainMessage='';
+ const full=p.givens.every((n,i)=>n||(Number(entry.cells[i])>=1&&Number(entry.cells[i])<=4));
+ if(full){
+  const correct=p.solution.every((n,i)=>n===(p.givens[i]||Number(entry.cells[i])));
+  if(correct){entry.done=true;ui.brainOpen=false}
+  else ui.brainMessage='Close! One or more numbers need another look.';
+ }
+ if(!entry.done){
+  const next=editable.find(i=>i>idx&&!entry.cells[i])??editable.find(i=>!entry.cells[i]);
+  ui.brainCell=next===undefined?idx:next;
+ }
+ save();render();return
+}
+if(b.dataset.brainChoice!==undefined){
+ if(ui.tab!=='home')return;
+ const date=homeViewDate(),p=brainPuzzleForDate(date);
+ if(p.kind!=='number')return;
+ const entry=brainEntry(date);
+ if(entry.done)return;
+ const round=Math.max(0,Math.floor(Number(entry.round)||0));
+ if(round>=3)return;
+ const choice=Number(b.dataset.brainChoice);
+ if(!p.rounds[round].choices.includes(choice))return;
+ if(choice!==p.rounds[round].answer){ui.brainMessage='Not quite—look for how the numbers change.';render();return}
+ entry.round=round+1;ui.brainMessage='';
+ if(entry.round>=3){entry.done=true;ui.brainOpen=false}
+ save();render();return
+}
+
 if(b.dataset.holidaySettings){ui.holidaySettingsOpen=!ui.holidaySettingsOpen;render();return}
 if(b.dataset.holidayDelete){
  state.settings.holidayCustom=customObservances().filter(x=>x.id!==b.dataset.holidayDelete);
@@ -3599,6 +3657,26 @@ if(el.dataset.setting){const k=el.dataset.setting;let v=el.value;if(k==='startDa
  ui.week=currentWeek()
  }else state.settings[k]=v;save();render();return}});
 document.addEventListener('submit',ev=>{
+if(ev.target.id==='brainWordForm'){
+ ev.preventDefault();
+ if(ui.tab!=='home')return;
+ const date=homeViewDate(),p=brainPuzzleForDate(date);
+ if(p.kind!=='word')return;
+ const entry=brainEntry(date);
+ if(entry.done)return;
+ const round=Math.max(0,Math.floor(Number(entry.round)||0));
+ if(round>=3)return;
+ const attempt=String(new FormData(ev.target).get('answer')||'').toUpperCase().replace(/[^A-Z]/g,'');
+ if(attempt===p.rounds[round].answer){
+  entry.round=round+1;ui.brainMessage='';
+  if(entry.round>=3){entry.done=true;ui.brainOpen=false}
+  save();
+ }else ui.brainMessage='Not quite—try rearranging the letters again.';
+ render();
+ if(!entry.done)document.getElementById('brainWordAnswer')?.focus?.({preventScroll:true});
+ return
+}
+
 if(ev.target.id==='holidayCustomForm'){
  ev.preventDefault();
  const fd=new FormData(ev.target),name=String(fd.get('name')||'').trim(),group=String(fd.get('group')||'').trim(),
